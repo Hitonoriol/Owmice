@@ -1,0 +1,8 @@
+for entry in "files"/*
+do
+  namelist="$namelist$entry $(basename $entry) "
+done
+
+./put_to_ramdisk $namelist
+
+mv initrd ../iso

@@ -1,0 +1,1 @@
+qemu-system-i386 -boot d -cdrom owmice-bootable.iso -m 5 -d guest_errors
