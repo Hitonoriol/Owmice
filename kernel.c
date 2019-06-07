@@ -20,6 +20,7 @@
 #include "standard/paging.h"
 #include "standard/kernel_call.h"
 #define assume(b) ((b) ? (void)0 : die(0xBADA55))
+#define MEMCAP 4194304
 extern uint32_t k_entry;
 extern volatile uint32_t kticks;
 task_t owshell;
@@ -32,18 +33,22 @@ void kmain(unsigned long magic, unsigned long addr) {
    	uint32_t initrd_location = *((uint32_t*)mboot_ptr->mods_addr);
    	uint32_t initrd_end = *(uint32_t*)(mboot_ptr->mods_addr+4);
 	mem_free -= ((initrd_end - initrd_location) + (&end - &k_entry)) + 1;
+	if (mem_free > MEMCAP)
+		mem_free = MEMCAP;
    	mem_unused = initrd_end + 1;
    	fs_root = initrd_init(initrd_location);
    	kernel_calls_init();
 	kbd_init();
 	paging_init();
 	tasking_init();
-
 	timer_init(PIT_10MSEC);
 	printf("Available to kernel: %uB\n", mem_free);
         cprint("Ready!", VGA_COLOR_MAGENTA);
 	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
+	draw_clock();
 	while(1) {
+		task_sleep(&task_main, 100);
+		draw_clock();
 		wait_int();
 	}
 }

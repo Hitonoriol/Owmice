@@ -4,8 +4,9 @@ typedef struct {
  
 typedef struct task_s {
 	uint32_t id;
-	uint32_t sleeptime;
+	volatile uint32_t sleeptime;
 	task_regs_t regs;
+	uint32_t entrypoint;
 	struct task_s *next;
 	struct task_s *prev;
 } task_t;
@@ -31,6 +32,7 @@ void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
 	task->regs.edi = 0;
 	task->regs.eflags = flags;
 	task->regs.eip = (uint32_t) main;
+	task->entrypoint = task->regs.eip;
 	task->regs.esp = malloc(1024);
 	task->next = &task_main;
 	task_main.prev = task;
@@ -98,10 +100,12 @@ asm volatile("\
 	mov (%eax), %eax;");
 }
  
+extern void kmain(unsigned long, unsigned long);
 void tasking_init() {
 	get_regs();
 	asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(task_main.regs.cr3)::"%eax");
 	asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(task_main.regs.eflags)::"%eax");
+	task_main.entrypoint = (uint32_t)kmain;
 	task_main.regs.esp = regdump.esp;
 	task_main.regs.eip = regdump.eip;
 	task_main.regs.eax = regdump.eax;
@@ -110,13 +114,24 @@ void tasking_init() {
 	task_main.regs.edx = regdump.edx;
 	task_main.regs.esi = regdump.esi;
 	task_main.regs.edi = regdump.edi;
-	
+	task_main.sleeptime = 0;
 	task_last = &task_main;
 	task_main.id = lid;
 	task_main.next = &task_main;
 	task_current = &task_main;
 	printf ("Tasking initialized!\nKernel thread (0x%X | PID: %u)\n", task_main.regs.eip, task_main.id);
 	
+}
+
+void task_list() {
+	task_t *tmp = &task_main;
+	bool lst = true;
+	while (lst || tmp != &task_main) {
+		lst = false;
+		printf("PID: %u | Entrypoint: 0x%X | Sleeptime: %u\n", tmp->id, tmp->entrypoint, tmp->sleeptime);
+		tmp = tmp->next;
+	}
+	term_undo_nl();
 }
 
 void task_yield() {
@@ -126,7 +141,7 @@ void task_yield() {
 	task_current = task_current->next;
 	if (task_current->sleeptime > 0) {
 		task_current->sleeptime--;
-		task_yield();
+		task_current = last;
 	}
 	switchTask(&last->regs, &task_current->regs);
 }

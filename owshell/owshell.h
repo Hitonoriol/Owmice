@@ -4,7 +4,7 @@
 #include "../screen/terminal.h"
 #include "../standard/strings.h"
 char* tbuf;
-static char* cmd[]={", ", "die","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now"};
+static char* cmd[]={", ", "die","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now", "lstasks"};
 
 void whelp() {
 	int CMDS = (sizeof(cmd) / sizeof(cmd[0])) - 1;
@@ -20,7 +20,7 @@ extern void ls_initrd();
 extern uint32_t malloc(uint32_t sz);
 extern char* kbd_get_string(char* buf);
 extern void cat_initrd(char* fname);
-
+extern void task_list();
 extern volatile uint32_t mem_free;
 extern volatile uint32_t mem_unused;
 void execute(char* com) {
@@ -39,9 +39,10 @@ void execute(char* com) {
 			ls_initrd();
 		else if (streq(com, "mem"))
 			printf("Available memory: %uB\nLast unused addr: 0x%X", mem_free, mem_unused);
-		else if (streq(com, "now")) {
+		else if (streq(com, "now"))
 			today();
-		}
+		else if (streq(com, "lstasks"))
+			task_list();
 		else if (strtok(tbuf, com, " ") != NULL){
 			if (streq(tbuf, "catrd"))
 				cat_initrd(strtok(tbuf, com, " "));

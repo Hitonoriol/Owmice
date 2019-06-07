@@ -4,6 +4,8 @@
 #include "ver.h"
 #include "../io/idt.h"
 #define COLOR_DEFAULT VGA_COLOR_LIGHT_GREY
+#define STATUSBAR_BG VGA_COLOR_LIGHT_GREY
+#define SCREEN_START 1
 uint8_t input_counter = 0;
 size_t term_row;
 size_t term_column;
@@ -16,7 +18,13 @@ unsigned int BACKSPACE_OFFSET = 2;
 unsigned int CURSOR_STEPBACK = 1;
 
 static const size_t VGA_WIDTH = 90;
-static const size_t VGA_HEIGHT = 30;
+static const size_t VGA_HEIGHT = 30 - SCREEN_START;
+
+void status_cls() {
+	for (size_t x = 0; x < VGA_WIDTH; x++) {
+		term_buffer[x] = vga_entry(' ', vga_entry_color(STATUSBAR_BG, STATUSBAR_BG));
+	}
+}
 
 void setcolor(uint8_t color) {
 	term_color = color;
@@ -78,9 +86,9 @@ uint16_t getcurpos(void) {
 }
 
 void term_cls() {
-	term_row = 0;
+	term_row = SCREEN_START;
 	term_column = 0;
-	for (size_t y = 0; y < VGA_HEIGHT; y++) {
+	for (size_t y = SCREEN_START; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
 			term_buffer[index] = vga_entry(' ', term_color);
@@ -89,7 +97,7 @@ void term_cls() {
 }
 
 void term_scroll() {
-    for(size_t ii = 0; ii < VGA_HEIGHT; ii++){
+    for(size_t ii = SCREEN_START; ii < VGA_HEIGHT; ii++){
         for (size_t i = 0; i < VGA_WIDTH; i++){
             term_buffer[ii * VGA_WIDTH + i] = term_buffer[(ii + 1) * VGA_WIDTH + i];
         }
@@ -101,6 +109,7 @@ void term_initialize(void) {
 	write_font(g_8x16_font, 16);
 	term_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 	term_cls();
+	status_cls();
 }
 
 void term_putentryat(char c, uint8_t color, size_t x, size_t y) {
@@ -121,14 +130,15 @@ void term_putentryat(char c, uint8_t color, size_t x, size_t y) {
 	term_buffer[index] = vga_entry(c, color);
 	if (c == '\0')
 		x--;
-	term_movecur(x + 1, y);
+	if (y != 0)
+		term_movecur(x + 1, y);
 }
 void term_putchar(char c) {
 	term_putentryat(c, term_color, term_column, term_row);
 	if (++term_column == VGA_WIDTH) {
 		term_column = 0;
 		if (++term_row == VGA_HEIGHT)
-			term_row = 0;
+			term_row = SCREEN_START;
 	}
 	if (term_row > (VGA_HEIGHT - 1)) {
 		term_row--;
@@ -141,6 +151,19 @@ void term_write(char* data, size_t size) {
 }
 void term_writestring(char* data) {
 	term_write(data, strlen(data));
+}
+
+uint32_t lastcol, lastrow;
+void write_statusbar(uint32_t x) {
+	lastcol = term_column;
+	lastrow = term_row;
+	term_row = 0;
+	term_column = x;
+}
+
+void statusbar_rev() {
+	term_row = lastrow;
+	term_column = lastcol;
 }
 
 void kprint (char* s) {
@@ -158,7 +181,21 @@ void cprint (char* s, uint8_t newc) {
 
 void console_init() {
 	term_initialize();
-	cprint(BUILD_STRING, VGA_COLOR_MAGENTA);
+	write_statusbar(0);
+	cprint(BUILD_STRING, vga_entry_color(VGA_COLOR_MAGENTA, STATUSBAR_BG));
+	statusbar_rev();
+}
+
+#define CLOCK_OFFSET 67
+extern void today();
+void draw_clock() {
+	write_statusbar(CLOCK_OFFSET);
+	uint8_t color = vga_entry_color(VGA_COLOR_BLACK, STATUSBAR_BG);
+	uint8_t tmp = term_color;
+	term_color = color;
+	today();
+	term_color = tmp;
+	statusbar_rev();
 }
 
 void prompt() {
