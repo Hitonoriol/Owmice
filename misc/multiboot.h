@@ -278,14 +278,14 @@
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
 		die(STATUS_BAD_MULTIBOOT);
 	mbt_ptr = (multiboot_info_t *) addr;
-	setcolor(VGA_COLOR_LIGHT_GREEN);
+	term_tempcolor(VGA_COLOR_LIGHT_GREEN);
 	if (FLAG_EXISTS(mbt_ptr->flags, 0)) {
 		mem_free = (((unsigned)mbt_ptr->mem_upper) * 1024);
         	printf("Total available memory: %uB\n", mem_free);
 	}
         if (FLAG_EXISTS(mbt_ptr->flags, 1))
         	printf ("Bootdev: 0x%X\n", (unsigned)mbt_ptr->boot_device);
-        setcolor(VGA_COLOR_LIGHT_GREY);
+        term_revertcolor();
         return mbt_ptr;
      }
      //Hitonoriol's shit ends here

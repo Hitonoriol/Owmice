@@ -1,6 +1,7 @@
 #ifndef _SCREEN_TERMINAL_H
 #define _SCREEN_TERMINAL_H
 #include "vga.h"
+#include "ver.h"
 #include "../io/idt.h"
 #define COLOR_DEFAULT VGA_COLOR_LIGHT_GREY
 uint8_t input_counter = 0;
@@ -14,8 +15,8 @@ char* pmt = ">\0";
 unsigned int BACKSPACE_OFFSET = 2;
 unsigned int CURSOR_STEPBACK = 1;
 
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
+static const size_t VGA_WIDTH = 90;
+static const size_t VGA_HEIGHT = 30;
 
 void setcolor(uint8_t color) {
 	term_color = color;
@@ -96,9 +97,12 @@ void term_scroll() {
 }
 
 void term_initialize(void) {
+	write_regs(g_90x30_text);
+	write_font(g_8x16_font, 16);
 	term_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 	term_cls();
 }
+
 void term_putentryat(char c, uint8_t color, size_t x, size_t y) {
 	if (c == '\n'){
 		term_row++;
@@ -154,7 +158,7 @@ void cprint (char* s, uint8_t newc) {
 
 void console_init() {
 	term_initialize();
-	cprint("Owmice [v]\n", VGA_COLOR_MAGENTA);
+	cprint(BUILD_STRING, VGA_COLOR_MAGENTA);
 }
 
 void prompt() {

@@ -27,7 +27,6 @@ void kmain(unsigned long magic, unsigned long addr) {
 	create_gdt();
 	idt_init();
 	console_init();
-	term_tempcolor(VGA_COLOR_GREEN);
 	multiboot_info_t *mboot_ptr = verify_multiboot(magic, addr);
         assume(mboot_ptr->mods_count > 0);
    	uint32_t initrd_location = *((uint32_t*)mboot_ptr->mods_addr);
@@ -42,7 +41,6 @@ void kmain(unsigned long magic, unsigned long addr) {
 
 	timer_init(PIT_10MSEC);
 	printf("Available to kernel: %uB\n", mem_free);
-	term_revertcolor();
         cprint("Ready!", VGA_COLOR_MAGENTA);
 	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
 	while(1) {
