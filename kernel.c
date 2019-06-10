@@ -34,17 +34,15 @@ void kmain(unsigned long magic, unsigned long addr) {
    	uint32_t initrd_location = *((uint32_t*)mboot_ptr->mods_addr);
    	uint32_t initrd_end = *(uint32_t*)(mboot_ptr->mods_addr+4);
    	uint32_t kernel_size = ((initrd_end - initrd_location) + (&end - &k_entry)) + 1;
-   	mem_deinit_region((uint32_t)&k_entry, &end - &k_entry);
-   	mem_deinit_region(initrd_location, initrd_end - initrd_location);
 	mem_free -= kernel_size;
-   	mem_unused = initrd_end + 1;
+   	mem_unused = initrd_end + 10;
    	fs_root = initrd_init(initrd_location);
+   	mem_deinit_region(initrd_location, (initrd_end - initrd_location)+1);
+   	paging_init();
    	kernel_calls_init();
 	kbd_init();
-	paging_init();
 	tasking_init();
 	timer_init(PIT_10MSEC);
-	mem_deinit_region((uint32_t)&k_entry, mem_unused - (uint32_t)&k_entry);
 	//at this point this shitty offset malloc should be disabled
 	printf("Available to kernel: %uB\n", mem_free);
         cprint("Ready!", VGA_COLOR_MAGENTA);

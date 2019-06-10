@@ -38,7 +38,7 @@ void execute(char* com) {
 		else if (streq(com, "lsrd"))
 			ls_initrd();
 		else if (streq(com, "mem"))
-			printf("Available memory: %uB\nLast unused addr: 0x%X", mem_free, mem_unused);
+			printf("Available memory: %uB", mem_free);
 		else if (streq(com, "now"))
 			today();
 		else if (streq(com, "lstasks"))

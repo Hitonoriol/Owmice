@@ -116,7 +116,7 @@ dump_stack:
   mov ebp, esp
   call printhex
   pop ebp
-  ret 
+  ret
 
 global in_buffer
 in_buffer: times 129 db 0

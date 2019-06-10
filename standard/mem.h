@@ -33,8 +33,12 @@ void mem_init_region (uint32_t base, size_t size) {
 	int align = base / BLOCK_SIZE;
 	int blocks = size / BLOCK_SIZE;
 	for (; blocks>0; blocks--) {
-		mmap_unset (align++);
-		blocks_used--;
+		uint32_t at = align;
+		align++;
+		if (mmap_test(at)) {
+			mmap_unset (at);
+			blocks_used--;
+		}
 	}
 	mmap_set (0);
 }
@@ -43,8 +47,12 @@ void mem_deinit_region (uint32_t base, size_t size) {
 	int align = base / BLOCK_SIZE;
 	int blocks = size / BLOCK_SIZE;
 	for ( ; blocks>0; blocks--) {
-		mmap_set (align++);
-		blocks_used++;
+		uint32_t at = align;
+		align++;
+		if (!mmap_test(at)) {
+			mmap_set (at);
+			blocks_used++;
+		}
 	}
 }
 
@@ -59,12 +67,37 @@ int find_free_block () {
 	return -1;
 }
 
-void *alloc_block () {
+int mmap_first_free_s (size_t size) {
+	if (size==0)
+		return -1;
+	if (size==1)
+		return find_free_block();
+	for (uint32_t i=0; i<blocks_max; i++)
+		if (memory_map[i] != 0xffffffff)
+			for (int j=0; j<32; j++) {
+				int bit = 1<<j;
+				if (!(memory_map[i] & bit)) {
+					int startingBit = i*32;
+					startingBit+=bit;
+					uint32_t free=0;
+					for (uint32_t count=0; count<=size;count++) {
+						if (! mmap_test (startingBit+count))
+							free++;
+						if (free==size)
+							return i*4*8+j;
+					}
+				}
+			}
+
+	return -1;
+}
+
+void *alloc_block() {
 	if (blocks_used >= blocks_max)
-		return 0;	//out of memory
+		die(STATUS_NOMEM+1);
 	int frame = find_free_block();
 	if (frame == -1)
-		return 0;	//out of memory
+		die(STATUS_NOMEM);
 	mmap_set (frame);
 	uint32_t addr = frame * BLOCK_SIZE;
 	blocks_used++;
@@ -76,6 +109,30 @@ void free_block (void* p) {
 	int frame = addr / BLOCK_SIZE;
 	mmap_unset (frame);
 	blocks_used--;
+}
+
+void* alloc_blocks (size_t size) {
+	if ((blocks_used - blocks_max) <= size)
+		die(STATUS_NOMEM);
+	int frame = mmap_first_free_s (size);
+
+	if (frame == -1)
+		die(STATUS_NOMEM);
+
+	for (uint32_t i = 0; i < size; i++)
+		mmap_set(frame + i);
+
+	uint32_t addr = frame * BLOCK_SIZE;
+	blocks_used += size;
+	return (void*)addr;
+}
+
+void free_blocks (void* p, size_t size) {
+	uint32_t addr = (uint32_t)p;
+	int frame = addr / BLOCK_SIZE;
+	for (uint32_t i = 0; i < size; i++)
+		mmap_unset (frame+i);
+	blocks_used -= size;
 }
 
 char* mem_regions[] = {
@@ -106,20 +163,22 @@ void pmem_init(multiboot_info_t* mbt_ptr) {
         term_tempcolor(VGA_COLOR_LIGHT_BLUE);
         kprint("Memory map");
         while((uint32_t)mb_mmap < mbt_ptr->mmap_addr + mbt_ptr->mmap_length) {
-        	printf("Addr: 0x%X%X Len: %X%X Type: %s\n",
+        	printf("Addr: 0x%X%X Len: %uB Type: %s\n",
         		mb_mmap->base_addr_high, mb_mmap->base_addr_low,
-        		mb_mmap->length_high, mb_mmap->length_low,
+        		mb_mmap->length_low,
         		mem_regions[mb_mmap->type]);
         	if (mb_mmap->type == 1)
 			mem_init_region(mb_mmap->base_addr_low, mb_mmap->length_low);
-		else
+		else {
 			mem_free -= mb_mmap->length_low;
+			mem_deinit_region(mb_mmap->base_addr_low, mb_mmap->length_low);
+		}
 		mb_mmap = (_multiboot_memory_map_t*) ((unsigned int)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size));
 	}
 	term_revertcolor();
 }
 
-void free(uint32_t sz) {		//only one malloc at a time can be freed... obviously
+void free(uint32_t sz) {
 	mem_unused -= sz;
 	mem_free += sz;
 }
