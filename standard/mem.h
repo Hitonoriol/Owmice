@@ -1,9 +1,123 @@
 #ifndef _STANDARD_MEM_H
 #define _STANDARD_MEM_H
 
+#define BLOCKS_PER_BYTE 8
+#define BLOCK_SIZE 4096
+#define BLOCK_ALIGN BLOCK_SIZE
+
+volatile uint32_t mem_size;
+volatile uint32_t blocks_used = 0;
+volatile uint32_t blocks_max;
+volatile uint32_t mmap_len;
+static uint32_t *memory_map;
+volatile uint32_t mb_mmap_len;
 volatile uint32_t mem_unused;
-volatile uint32_t mem_free = 0;
+volatile uint32_t mem_free = 0;//todo remove this shit
+
+uint32_t malloc(uint32_t);
 extern uint32_t end;
+
+void mmap_set(int bit) {
+	bit_set(memory_map, bit);
+}
+
+void mmap_unset(int bit) {
+	bit_unset(memory_map, bit);
+}
+
+bool mmap_test(int bit) {
+	return bit_test(memory_map, bit);
+}
+
+void mem_init_region (uint32_t base, size_t size) {
+	int align = base / BLOCK_SIZE;
+	int blocks = size / BLOCK_SIZE;
+	for (; blocks>0; blocks--) {
+		mmap_unset (align++);
+		blocks_used--;
+	}
+	mmap_set (0);
+}
+
+void mem_deinit_region (uint32_t base, size_t size) {
+	int align = base / BLOCK_SIZE;
+	int blocks = size / BLOCK_SIZE;
+	for ( ; blocks>0; blocks--) {
+		mmap_set (align++);
+		blocks_used++;
+	}
+}
+
+int find_free_block () {
+	for (uint32_t i = 0; i < blocks_max / 32; i++)
+		if (memory_map[i] != 0xffffffff)
+			for (int j = 0; j<32; j++) {
+				int bit = 1 << j;
+				if (!(memory_map[i] & bit))
+					return i*4*8+j;
+			}
+	return -1;
+}
+
+void *alloc_block () {
+	if (blocks_used >= blocks_max)
+		return 0;	//out of memory
+	int frame = find_free_block();
+	if (frame == -1)
+		return 0;	//out of memory
+	mmap_set (frame);
+	uint32_t addr = frame * BLOCK_SIZE;
+	blocks_used++;
+	return (void*)addr;
+}
+
+void free_block (void* p) {
+	uint32_t addr = (uint32_t)p;
+	int frame = addr / BLOCK_SIZE;
+	mmap_unset (frame);
+	blocks_used--;
+}
+
+char* mem_regions[] = {
+	"Available",	//0
+	"Reserved",	//1
+	"ACPI Reclaim",	//2
+	"ACPI NVS Memory"//3
+};
+
+typedef struct _multiboot_memory_map {
+	uint32_t size;
+	uint32_t base_addr_low,base_addr_high;// or unsigned long long int base_addr
+	uint32_t length_low,length_high;	// or unsigned long long int length
+	uint32_t type;
+} _multiboot_memory_map_t;
+
+volatile _multiboot_memory_map_t *mb_mmap;
+
+void pmem_init(multiboot_info_t* mbt_ptr) {
+	mb_mmap_len = mbt_ptr->mmap_length;
+        mem_size = mbt_ptr->mem_upper;
+        mb_mmap = (_multiboot_memory_map_t*)mbt_ptr->mmap_addr;
+        blocks_max = (mem_size*1024) / 4096;
+        mmap_len = blocks_max / BLOCKS_PER_BYTE;
+        memory_map = (uint32_t*)malloc(mmap_len);
+        memset (memory_map, 0xf, mmap_len);
+        blocks_used = blocks_max;
+        term_tempcolor(VGA_COLOR_LIGHT_BLUE);
+        kprint("Memory map");
+        while((uint32_t)mb_mmap < mbt_ptr->mmap_addr + mbt_ptr->mmap_length) {
+        	printf("Addr: 0x%X%X Len: %X%X Type: %s\n",
+        		mb_mmap->base_addr_high, mb_mmap->base_addr_low,
+        		mb_mmap->length_high, mb_mmap->length_low,
+        		mem_regions[mb_mmap->type]);
+        	if (mb_mmap->type == 1)
+			mem_init_region(mb_mmap->base_addr_low, mb_mmap->length_low);
+		else
+			mem_free -= mb_mmap->length_low;
+		mb_mmap = (_multiboot_memory_map_t*) ((unsigned int)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size));
+	}
+	term_revertcolor();
+}
 
 void free(uint32_t sz) {		//only one malloc at a time can be freed... obviously
 	mem_unused -= sz;

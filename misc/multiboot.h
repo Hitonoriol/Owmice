@@ -281,12 +281,12 @@
 	term_tempcolor(VGA_COLOR_LIGHT_GREEN);
 	if (FLAG_EXISTS(mbt_ptr->flags, 0)) {
 		mem_free = (((unsigned)mbt_ptr->mem_upper) * 1024);
-        	printf("Total available memory: %uB\n", mem_free);
+        	printf("Total physical memory: %uB\n", mem_free);
 	}
         if (FLAG_EXISTS(mbt_ptr->flags, 1))
         	printf ("Bootdev: 0x%X\n", (unsigned)mbt_ptr->boot_device);
         term_revertcolor();
-        return mbt_ptr;
+        return (multiboot_info_t*)addr;
      }
      //Hitonoriol's shit ends here
      
