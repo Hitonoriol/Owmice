@@ -25,9 +25,6 @@ struct IDT_entry {
 };
 
 struct IDT_entry IDT[IDT_SIZE];
-inline void io_wait(void) {
-    asm volatile ( "outb %%al, $0x80" : : "a"(0) );
-}
 
 void EOI() {
 	write_port(0x20, 0x20);

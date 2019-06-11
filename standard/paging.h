@@ -1,13 +1,18 @@
 #define PAGES_PER_TABLE 1024
 #define PAGES_PER_DIR	1024
-#define PAGE_DIRECTORY_INDEX(x) (((x) >> 22) & 0x3ff)
-#define PAGE_TABLE_INDEX(x) (((x) >> 12) & 0x3ff)
-#define PAGE_GET_PHYSICAL_ADDRESS(x) (*x & ~0xfff)
+#define PAGEDIR_IDX(x) (((x) >> 22) & 0x3ff)
+#define PAGETABLE_IDX(x) (((x) >> 12) & 0x3ff)
+#define PAGE_ADDR(x) (*x & ~0xfff)
 #define PTABLE_ADDR_SPACE_SIZE 0x400000
 #define DTABLE_ADDR_SPACE_SIZE 0x100000000
 #define PAGE_SIZE 4096
 #define KERNEL_VADDR_START 0xC0000000
-
+#define KHEAP_START         0xC0000000
+#define KHEAP_INITIAL_SIZE  0x10000
+#define HEAP_INDEX_SIZE   0x20000
+#define HEAP_MAGIC        0x123890AB
+#define HEAP_MIN_SIZE     0x10000
+#define KERNEL_PHYS_START 0x100000
 enum PAGE_FLAGS {
 	PAGE_PRESENT = 1,
 	PAGE_WRITABLE = 2,
@@ -100,7 +105,7 @@ typedef struct pagedir_s {
 	uint32_t entry[PAGES_PER_DIR];
 } pagedir_t;
 
-pagedir_t *current_directory;
+pagedir_t *dir_current;
 pagedir_t *kernel_dir;
 
 void paging_enable() {
@@ -115,7 +120,7 @@ void paging_enable() {
 	");
 }
 
-void pagedir_load(unsigned int *ptr) {
+void pagedir_load(uint32_t *ptr) {
 	asm volatile ("\
 	push %ebp;\
 	mov %esp, %ebp;\
@@ -134,45 +139,49 @@ void pagefault() {
 	die(STATUS_PAGEFAULT);
 }
 
-inline uint32_t* ptable_lookup_entry (pagetable_t* p, uint32_t addr) {	//virtual addr to PDT index
+uint32_t* get_page (pagetable_t* p, uint32_t addr) {
 	if (p)
-		return &p->entry[PAGE_TABLE_INDEX(addr)];
+		return &p->entry[PAGETABLE_IDX(addr)];
 	return 0;
 }
 
-inline uint32_t* pdirectory_lookup_entry (pagedir_t* p, uint32_t addr) {	//get pagedir entry from index in table
+pagetable_t* get_pagetable (pagedir_t* p, uint32_t addr) {
 	if (p)
-		return &p->entry[ PAGE_TABLE_INDEX (addr) ];
+		return (pagetable_t*)PAGE_ADDR(&p->entry[PAGEDIR_IDX(addr)]);
 	return 0;
 }
 
-inline bool switch_pdirectory (pagedir_t* dir) {
+uint32_t* _get_page (uint32_t addr) {
+	return get_page(get_pagetable(dir_current, addr), addr);
+}
+
+inline bool switch_directory (pagedir_t* dir) {
 	if (!dir)
 		return false;
-	current_directory = dir;
-	pagedir_load((unsigned int*)dir);
+	dir_current = dir;
+	pagedir_load((uint32_t*)dir);
 	return true;
 }
  
 pagedir_t* get_directory() {
-	return current_directory;
+	return dir_current;
 }
 
 void map_page (void* phys, void* virt) {
-	pagedir_t* pageDirectory = get_directory();
-	uint32_t* e = &pageDirectory->entry [PAGE_DIRECTORY_INDEX ((uint32_t) virt)];
+	pagedir_t* tempdir = get_directory();
+	uint32_t* e = &tempdir->entry [PAGEDIR_IDX ((uint32_t) virt)];
 	if ((*e & PAGE_PRESENT) != PAGE_PRESENT) {
 		pagetable_t* table = (pagetable_t*) alloc_block();
 		if (!table)
 			die(STATUS_NOMEM);
 		memset (table, 0, sizeof(pagetable_t));
-		uint32_t* entry = &pageDirectory->entry [PAGE_DIRECTORY_INDEX ( (uint32_t) virt) ];
+		uint32_t* entry = &tempdir->entry [PAGEDIR_IDX((uint32_t)virt)];
 		table_add_property (entry, PDE_PRESENT);
 		table_add_property (entry, PDE_WRITABLE);
 		table_set_frame (entry, (uint32_t)table);
 	}
-	pagetable_t* table = (pagetable_t*) PAGE_GET_PHYSICAL_ADDRESS(e);
-	uint32_t* page = &table->entry [PAGE_TABLE_INDEX((uint32_t) virt)];
+	pagetable_t* table = (pagetable_t*) PAGE_ADDR(e);
+	uint32_t* page = &table->entry [PAGETABLE_IDX((uint32_t)virt)];
 	page_set_frame (page, (uint32_t) phys);
 	page_set_property (page, PAGE_PRESENT);
 }
@@ -195,7 +204,11 @@ void free_page (uint32_t* e) {
 	page_del_property (e, PAGE_PRESENT);
 }
 
+
+heap_t *heap_kernel;
+extern heap_t *create_heap(uint32_t, uint32_t, uint32_t, uint8_t, uint8_t);
 void paging_init() {
+	printf("Initializing paging... ");
 	pagetable_t* table = (pagetable_t*) alloc_block();
 	if (!table)
 		die(STATUS_NOMEM);
@@ -206,33 +219,34 @@ void paging_init() {
 
 	memset (table, 0, sizeof (pagetable_t));
 
-	for (int i = 0, frame = 0x0, virt = 0x00000000; i < 1024; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {	//the first 4MB are identity mapped
+	for (uint32_t i = 0, frame = 0x0, virt = 0x00000000; i < 1024; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {	//the first 4MB are identity mapped
 		uint32_t page = 0;
 		page_set_property(&page, PAGE_PRESENT);
  		page_set_frame(&page, frame);
-		mem_start_table->entry [PAGE_TABLE_INDEX (virt)] = page;
+		mem_start_table->entry [PAGETABLE_IDX (virt)] = page;
 	}
-	for (int i = 0, frame = 0x100000, virt = KERNEL_VADDR_START; i < 1024; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) { // 1MB -> 3GB
+	for (uint32_t i = 0, frame = KERNEL_PHYS_START, virt = KERNEL_VADDR_START; i < 4096; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) { // 1MB -> 3GB
 		uint32_t page = 0;
 		page_set_property(&page, PAGE_PRESENT);
 		page_set_frame(&page, frame);
-		table->entry[PAGE_TABLE_INDEX(virt)] = page;
+		table->entry[PAGETABLE_IDX(virt)] = page;
 	}
 	pagedir_t* dir = (pagedir_t*) alloc_blocks(3);
+	kernel_dir = dir;
 	if (!dir)
 		die(0x366);
 	memset (dir, 0, sizeof (pagedir_t));
-	uint32_t* entry = &dir->entry [PAGE_DIRECTORY_INDEX(KERNEL_VADDR_START)];
+	uint32_t* entry = &dir->entry [PAGEDIR_IDX(KERNEL_VADDR_START)];
 	table_add_property (entry, PDE_PRESENT);
 	table_add_property (entry, PDE_WRITABLE);
 	table_set_frame (entry, (uint32_t)table);
-
-	uint32_t* entry2 = &dir->entry[PAGE_DIRECTORY_INDEX(0x00000000)];
+	uint32_t* entry2 = &dir->entry[PAGEDIR_IDX(0x00000000)];
 	table_add_property (entry2, PDE_PRESENT);
 	table_add_property (entry2, PDE_WRITABLE);
 	table_set_frame (entry2, (uint32_t)mem_start_table);
-	
 	irq_map_handler(14, (unsigned long)pagefault);
-	switch_pdirectory(dir);
+	switch_directory(dir);
+	heap_kernel = create_heap(KHEAP_START, KHEAP_START+KHEAP_INITIAL_SIZE, 0xCFFFF000, 0, 0);
 	paging_enable();
+	printf("Done!\n");
 }

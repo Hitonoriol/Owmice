@@ -4,7 +4,7 @@
 #define BLOCKS_PER_BYTE 8
 #define BLOCK_SIZE 4096
 #define BLOCK_ALIGN BLOCK_SIZE
-
+#include "ordered_list.h"
 volatile uint32_t mem_size;
 volatile uint32_t blocks_used = 0;
 volatile uint32_t blocks_max;
@@ -101,6 +101,7 @@ void *alloc_block() {
 	mmap_set (frame);
 	uint32_t addr = frame * BLOCK_SIZE;
 	blocks_used++;
+	printf("Phys block 0x%X allocated\n", addr);
 	return (void*)addr;
 }
 
@@ -202,8 +203,23 @@ uint32_t amalloc(uint32_t sz) {
 	return alloc(sz, true);
 }
 
+typedef struct {
+   ordered_array_t index;
+   uint32_t start_address;
+   uint32_t end_address;
+   uint32_t max_address;
+   uint8_t supervisor;
+   uint8_t readonly;
+} heap_t;
+
+extern heap_t *heap_kernel;
+extern void *_alloc(uint32_t, uint8_t, heap_t*);
+
 uint32_t malloc(uint32_t sz) {
-	return alloc(sz, false);
+	if (heap_kernel == NULL)
+		return alloc(sz, false);
+	else
+		return (uint32_t)_alloc(sz, 0, heap_kernel);
 }
 
 uint32_t get_mem() {

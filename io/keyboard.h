@@ -7,9 +7,11 @@ volatile int bufpos = 0;
 volatile bool request = false;
 char *charbuffer = "a";
 void kbd_init(void) {
+	printf("Setting up keyboard driver... ");
 	irq_map_handler(IRQ_KEYBOARD, (unsigned long)keyboard_handler);
 	write_port(0x21, 0xFD);
 	write_port(0xA1, 0xFF);
+	printf("Done!\n");
 }
 
 char* kbd_get_string(char* buf) {
@@ -27,12 +29,12 @@ void keyboard_handler_main(void) {
 	EOI();
 	unsigned char status;
 	char keycode;
-	char actualkey;
+	char keychar;
 	if (!request) return;
 	status = read_port(KEYBOARD_STATUS_PORT);
 		if (status & 0x01) {
 			keycode = read_port(KEYBOARD_DATA_PORT);
-			actualkey = keyboard_map[(unsigned char) keycode];
+			keychar = keyboard_map[(unsigned char) keycode];
 			if ((status & 0x20)) return;
 			if (keycode < 0) return;
 			else if(keycode == ENTER_KEY_CODE) {
@@ -40,23 +42,23 @@ void keyboard_handler_main(void) {
 				request = false;
 				bufpos = 0;
 				return;
-			} else if (actualkey == '\b'){
+			} else if (keychar == '\b'){
 				size_t comlen = strlen(con_input);
 				if (comlen > 0){
 					con_input[comlen - 1] = '\0';
 					bufpos++;
-					term_putchar(actualkey);
+					term_putchar(keychar);
 				} else return;
 			} else {
-				actualkey = keyboard_map[(unsigned char)keycode];
-				if (actualkey == '\0')
+				keychar = keyboard_map[(unsigned char)keycode];
+				if (keychar == '\0')
 					return;
 				if (bufpos >= INPUT_MAXLEN)
 					return;
 				bufpos++;
-				memcpy(charbuffer, &actualkey, 1);
+				memcpy(charbuffer, &keychar, 1);
 				con_input = strcat(con_input, charbuffer);
-				term_putchar(actualkey);
+				term_putchar(keychar);
 			}
 		}
 		return;

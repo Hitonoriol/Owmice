@@ -57,6 +57,7 @@ static fs_node_t *initrd_finddir(fs_node_t *node, char *name) {
 }
 
 fs_node_t *initrd_init(uint32_t location) {
+	printf("Initializing ramdisk (0x%X)... ", location);
 	initrd_header = (initrd_header_t *)location;
 	file_headers = (initrd_file_header_t *) (location+sizeof(initrd_header_t));
 	initrd_root = (fs_node_t*)malloc(sizeof(fs_node_t));
@@ -85,7 +86,7 @@ fs_node_t *initrd_init(uint32_t location) {
 	initrd_mtp->impl = 0;
 	root_nodes = (fs_node_t*)malloc(sizeof(fs_node_t) * initrd_header->nfiles);
 	nroot_nodes = initrd_header->nfiles;
-	printf("Files on initrd: %d\n", initrd_header->nfiles);
+	printf("%d files found.", initrd_header->nfiles);
 	uint32_t i;
 	for (i = 0; i < initrd_header->nfiles; i++) {
 		file_headers[i].offset += location;
@@ -102,6 +103,7 @@ fs_node_t *initrd_init(uint32_t location) {
 		root_nodes[i].close = 0;
 		root_nodes[i].impl = 0;
 	}
+	printf(" Done!\n");
 	return initrd_root;
 }
 

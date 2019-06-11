@@ -33,7 +33,7 @@ void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
 	task->regs.eflags = flags;
 	task->regs.eip = (uint32_t) main;
 	task->entrypoint = task->regs.eip;
-	task->regs.esp = malloc(1024);
+	task->regs.esp = malloc(512);
 	task->next = &task_main;
 	task_main.prev = task;
 	task_yield();
