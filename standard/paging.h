@@ -1,5 +1,5 @@
 #define PAGES_PER_TABLE 1024
-#define PAGES_PER_DIR	1024
+#define TABLES_PER_DIR	1024
 #define PAGEDIR_IDX(x) (((x) >> 22) & 0x3ff)
 #define PAGETABLE_IDX(x) (((x) >> 12) & 0x3ff)
 #define PAGE_ADDR(x) (*x & ~0xfff)
@@ -7,11 +7,6 @@
 #define DTABLE_ADDR_SPACE_SIZE 0x100000000
 #define PAGE_SIZE 4096
 #define KERNEL_VADDR_START 0xC0000000
-#define KHEAP_START         0xC0000000
-#define KHEAP_INITIAL_SIZE  0x10000
-#define HEAP_INDEX_SIZE   0x20000
-#define HEAP_MAGIC        0x123890AB
-#define HEAP_MIN_SIZE     0x10000
 #define KERNEL_PHYS_START 0x100000
 enum PAGE_FLAGS {
 	PAGE_PRESENT = 1,
@@ -102,11 +97,10 @@ typedef struct pagetable_s {
 } pagetable_t;
  
 typedef struct pagedir_s {
-	uint32_t entry[PAGES_PER_DIR];
+	uint32_t entry[TABLES_PER_DIR];
 } pagedir_t;
 
 pagedir_t *dir_current;
-pagedir_t *kernel_dir;
 
 void paging_enable() {
 	asm volatile ("\
@@ -131,11 +125,23 @@ void pagedir_load(uint32_t *ptr) {
 	");
 }
 
-void pagefault() {
+
+void pagefault(registers_t regs) {
 	uint32_t addr;
 	asm volatile("mov %%cr2, %0" : "=r" (addr));
+	int present   = !(regs.err_code & 0x1);
+	int rw = regs.err_code & 0x2;
+	int us = regs.err_code & 0x4;
+	int reserved = regs.err_code & 0x8;
+	int id = regs.err_code & 0x10;
+
 	setcolor(VGA_COLOR_LIGHT_CYAN);
 	printf("\nPagefault at 0x%X\n", addr);
+	if (present) printf("Not present\n");
+   	if (rw) printf("RO\n");
+   	if (us) printf("Usermode\n");
+   	if (reserved) printf("Reserved\n");
+    	if (id) printf("Instruction fetch\n");
 	die(STATUS_PAGEFAULT);
 }
 
@@ -155,7 +161,7 @@ uint32_t* _get_page (uint32_t addr) {
 	return get_page(get_pagetable(dir_current, addr), addr);
 }
 
-inline bool switch_directory (pagedir_t* dir) {
+bool switch_directory (pagedir_t* dir) {
 	if (!dir)
 		return false;
 	dir_current = dir;
@@ -167,7 +173,7 @@ pagedir_t* get_directory() {
 	return dir_current;
 }
 
-void map_page (void* phys, void* virt) {
+void map_table (uint32_t phys, uint32_t virt) {
 	pagedir_t* tempdir = get_directory();
 	uint32_t* e = &tempdir->entry [PAGEDIR_IDX ((uint32_t) virt)];
 	if ((*e & PAGE_PRESENT) != PAGE_PRESENT) {
@@ -175,18 +181,30 @@ void map_page (void* phys, void* virt) {
 		if (!table)
 			die(STATUS_NOMEM);
 		memset (table, 0, sizeof(pagetable_t));
+		for (uint32_t i = 0, frame = phys, _virt = virt; i < 1024; i++, frame += PAGE_SIZE, _virt += PAGE_SIZE){
+			uint32_t page = 0;
+			page_set_property(&page, PAGE_PRESENT);
+			page_set_property(&page, PAGE_WRITABLE);
+			page_set_frame(&page, frame);
+			table->entry[PAGETABLE_IDX(_virt)] = page;
+		}
 		uint32_t* entry = &tempdir->entry [PAGEDIR_IDX((uint32_t)virt)];
 		table_add_property (entry, PDE_PRESENT);
 		table_add_property (entry, PDE_WRITABLE);
 		table_set_frame (entry, (uint32_t)table);
 	}
-	pagetable_t* table = (pagetable_t*) PAGE_ADDR(e);
-	uint32_t* page = &table->entry [PAGETABLE_IDX((uint32_t)virt)];
-	page_set_frame (page, (uint32_t) phys);
-	page_set_property (page, PAGE_PRESENT);
+	return;
 }
 
-
+void map_tables(uint32_t phys, uint32_t virt, uint32_t amt) {
+	uint32_t step = PAGE_SIZE * PAGES_PER_TABLE;
+	while(amt > 0) {
+		map_table(phys, virt);
+		phys += step;
+		virt += step;
+		--amt;
+	}
+}
 
 bool alloc_page (uint32_t* e) {
 	void* p = alloc_block();
@@ -194,6 +212,7 @@ bool alloc_page (uint32_t* e) {
 		return false;
 	page_set_frame (e, (uint32_t)p);
 	page_set_property (e, PAGE_PRESENT);
+	page_set_property (e, PAGE_WRITABLE);
 	return true;
 }
 
@@ -204,10 +223,12 @@ void free_page (uint32_t* e) {
 	page_del_property (e, PAGE_PRESENT);
 }
 
-
-heap_t *heap_kernel;
-extern heap_t *create_heap(uint32_t, uint32_t, uint32_t, uint8_t, uint8_t);
+#define MEM_INIT_SIZE 4
+extern uint32_t kernel_size;
 void paging_init() {
+	kernel_mem = (mem_t*)malloc(sizeof(mem_t));
+	kernel_mem->start = KERNEL_VADDR_START + kernel_size;
+	kernel_mem->end = kernel_mem->start + (MEM_INIT_SIZE * 0x100000);
 	printf("Initializing paging... ");
 	pagetable_t* table = (pagetable_t*) alloc_block();
 	if (!table)
@@ -216,23 +237,24 @@ void paging_init() {
 	pagetable_t* mem_start_table = (pagetable_t*) alloc_block();
 	if (!mem_start_table)
 		die(STATUS_NOMEM);
+	memset(table, 0, sizeof (pagetable_t));
 
-	memset (table, 0, sizeof (pagetable_t));
-
-	for (uint32_t i = 0, frame = 0x0, virt = 0x00000000; i < 1024; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {	//the first 4MB are identity mapped
+	for (uint32_t i = 0, frame = 0x0, virt = 0x00000000; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {	//identity mapping 0-4MB
 		uint32_t page = 0;
 		page_set_property(&page, PAGE_PRESENT);
+		page_set_property(&page, PAGE_WRITABLE);
  		page_set_frame(&page, frame);
 		mem_start_table->entry [PAGETABLE_IDX (virt)] = page;
 	}
-	for (uint32_t i = 0, frame = KERNEL_PHYS_START, virt = KERNEL_VADDR_START; i < 4096; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) { // 1MB -> 3GB
+	for (uint32_t i = 0, frame = KERNEL_PHYS_START, virt = KERNEL_VADDR_START; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) { // phys_start -> vaddr_start
 		uint32_t page = 0;
 		page_set_property(&page, PAGE_PRESENT);
+		page_set_property(&page, PAGE_WRITABLE);
 		page_set_frame(&page, frame);
 		table->entry[PAGETABLE_IDX(virt)] = page;
 	}
 	pagedir_t* dir = (pagedir_t*) alloc_blocks(3);
-	kernel_dir = dir;
+	printf("Dir addr: 0x%X\n", (uint32_t*)dir);
 	if (!dir)
 		die(0x366);
 	memset (dir, 0, sizeof (pagedir_t));
@@ -245,8 +267,12 @@ void paging_init() {
 	table_add_property (entry2, PDE_WRITABLE);
 	table_set_frame (entry2, (uint32_t)mem_start_table);
 	irq_map_handler(14, (unsigned long)pagefault);
-	switch_directory(dir);
-	heap_kernel = create_heap(KHEAP_START, KHEAP_START+KHEAP_INITIAL_SIZE, 0xCFFFF000, 0, 0);
+	if (!switch_directory(dir))
+		die(0xD1);
+	printf("%u kernel pages\n", ((0x1000+(kernel_size&0xFFFFF000))/1024));
+	map_tables(KERNEL_PHYS_START, KERNEL_VADDR_START, ((0x1000+(kernel_size&0xFFFFF000))/1024)+MEM_INIT_SIZE + 1);
 	paging_enable();
+	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
+	mem_unused = kernel_mem->start;
 	printf("Done!\n");
 }

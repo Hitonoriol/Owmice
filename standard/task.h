@@ -15,8 +15,9 @@ static task_t *task_current;
 static task_t *task_last;
 static task_t task_main;
 volatile uint32_t lid = 0;
-
+extern uint32_t amalloc(uint32_t);
 void task_yield();
+
 void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
 	task->id = ++lid;
 	task_last->next = task;
@@ -33,7 +34,8 @@ void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
 	task->regs.eflags = flags;
 	task->regs.eip = (uint32_t) main;
 	task->entrypoint = task->regs.eip;
-	task->regs.esp = malloc(512);
+	task->regs.esp = amalloc(0x1000);
+	printf("new stack: 0x%X\n", task->regs.esp);
 	task->next = &task_main;
 	task_main.prev = task;
 	task_yield();
@@ -51,7 +53,26 @@ void task_kill(task_t *task) {
 	//free task stack and state
 }
 
-void switchTask(task_regs_t *from, task_regs_t *to) {
+void task_end() {
+	task_kill(task_current);
+}
+
+bool task_kill_pid(uint32_t pid) {
+	task_t *tmp = &task_main;
+	bool lst = true;
+	while (lst || tmp != &task_main) {
+		lst = false;
+		if (tmp->id == pid) {
+			task_kill(tmp);
+			printf("Task #%u killed!\n", pid);
+			return true;
+		}
+		tmp = tmp->next;
+	}
+	return false;
+}
+
+void task_switch(task_regs_t *from, task_regs_t *to) {
 asm volatile("\
 	pusha;\
 	pushf;\
@@ -102,9 +123,10 @@ asm volatile("\
  
 extern void kmain(unsigned long, unsigned long);
 void tasking_init() {
-	get_regs();
 	asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(task_main.regs.cr3)::"%eax");
+	printf("cr3: 0x%X\n", task_main.regs.cr3);
 	asm volatile("pushfl; movl (%%esp), %%eax; movl %%eax, %0; popfl;":"=m"(task_main.regs.eflags)::"%eax");
+	get_regs();
 	task_main.entrypoint = (uint32_t)kmain;
 	task_main.regs.esp = regdump.esp;
 	task_main.regs.eip = regdump.eip;
@@ -143,5 +165,5 @@ void task_yield() {
 		task_current->sleeptime--;
 		task_current = last;
 	}
-	switchTask(&last->regs, &task_current->regs);
+	task_switch(&last->regs, &task_current->regs);
 }

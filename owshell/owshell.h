@@ -4,7 +4,7 @@
 #include "../screen/terminal.h"
 #include "../standard/strings.h"
 char* tbuf;
-static char* cmd[]={", ", "die","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now", "lstasks"};
+static char* cmd[]={", ", "die", "exit","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now", "lstasks"};
 
 void whelp() {
 	int CMDS = (sizeof(cmd) / sizeof(cmd[0])) - 1;
@@ -21,8 +21,7 @@ extern uint32_t malloc(uint32_t sz);
 extern char* kbd_get_string(char* buf);
 extern void cat_initrd(char* fname);
 extern void task_list();
-extern volatile uint32_t mem_free;
-extern volatile uint32_t mem_unused;
+extern uint32_t get_mem();
 void execute(char* com) {
 		clearchar(tbuf);
 		if (streq(com, "exit"))
@@ -38,7 +37,7 @@ void execute(char* com) {
 		else if (streq(com, "lsrd"))
 			ls_initrd();
 		else if (streq(com, "mem"))
-			printf("Available memory: %uB", mem_free);
+			get_mem();
 		else if (streq(com, "now"))
 			today();
 		else if (streq(com, "lstasks"))
@@ -46,9 +45,8 @@ void execute(char* com) {
 		else if (strtok(tbuf, com, " ") != NULL){
 			if (streq(tbuf, "catrd"))
 				cat_initrd(strtok(tbuf, com, " "));
-			else
-				printf("No such command.");
-		}
+		} else
+			printf("No such command.");
 }
 
 void owshell_main() {
@@ -61,5 +59,6 @@ void owshell_main() {
 		execute(cmd);
 	}
 	cprint("End of session.", VGA_COLOR_MAGENTA);
+	task_end();
 }
 #endif

@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include "strings.h"
 #define EOF (-1)
+
 void* memmove(void* dstptr, const void* srcptr, size_t size) {
 	unsigned char* dst = (unsigned char*) dstptr;
 	const unsigned char* src = (const unsigned char*) srcptr;
@@ -195,7 +196,10 @@ void get_regs() {
 
 void dump_registers() {
 	get_regs();
+	uint32_t cr3;
+	asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(cr3)::"%eax");
 	setcolor(VGA_COLOR_RED);
+	printf("CR3: 0x%X EIP: 0x%X\n", cr3, regdump.eip);
 	printf("EAX: 0x%X EBX: 0x%X ECX: 0x%X EDX: 0x%X\n", regdump.eax, regdump.ebx, regdump.ecx, regdump.edx);
 	printf("ESI: 0x%X EDI: 0x%X\n", regdump.esi, regdump.edi);
 	printf("ESP: 0x%X\n", regdump.esp);
@@ -220,6 +224,11 @@ void die(uint32_t stat) {
 	}
 	dump_registers();
 	wait_int();
+}
+
+void _die(uint32_t stat, const char *file, uint32_t line) {
+	printf("Assertion at %s:%u failed.\n", file, line);
+	die(stat);
 }
 
 void stop(const char *file, uint32_t line) {

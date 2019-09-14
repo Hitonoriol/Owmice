@@ -19,11 +19,11 @@
 #include "io/vfs.h"
 #include "io/initrd.h"
 #include "standard/paging.h"
-#include "standard/heap.h"
 #include "standard/kernel_call.h"
-#define assume(b) ((b) ? (void)0 : die(0xBADA55))
+#define assume(b) ((b) ? (void)0 : _die(0xBADA55, __FILE__, __LINE__))
 extern uint32_t k_entry;
 extern volatile uint32_t kticks;
+uint32_t kernel_size;
 task_t owshell;
 void kmain(unsigned long magic, unsigned long addr) {
 	create_gdt();
@@ -33,23 +33,23 @@ void kmain(unsigned long magic, unsigned long addr) {
         assume(mboot_ptr->mods_count > 0);
    	uint32_t initrd_location = *((uint32_t*)mboot_ptr->mods_addr);
    	uint32_t initrd_end = *(uint32_t*)(mboot_ptr->mods_addr+4);
-   	uint32_t kernel_size = ((initrd_end - initrd_location) + (&end - &k_entry)) + 1;
+   	kernel_size = ((initrd_end - initrd_location) + (&end - &k_entry)) + 1;
 	mem_free -= kernel_size;
    	mem_unused = initrd_end + 1;
    	fs_root = initrd_init(initrd_location);
    	pmem_init(mboot_ptr);
    	mem_deinit_region(initrd_location, (initrd_end - initrd_location));
    	mem_deinit_region((uint32_t)&k_entry, (uint32_t)(&end - &k_entry));
-   	mem_deinit_region(0x1, 0x9D000);
+   	//mem_deinit_region(0x1, 0x9D000);
    	kernel_calls_init();
 	kbd_init();
 	paging_init();
+	printf("Kernel end: 0x%X\n", &end);
 	tasking_init();
 	timer_init(PIT_10MSEC);
 	printf("Available to kernel: %uB\n", mem_free);
         cprint("Ready!", VGA_COLOR_MAGENTA);
 	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
-	brk();
 	draw_clock();
 	while(1) {
 		task_sleep(&task_main, 100);

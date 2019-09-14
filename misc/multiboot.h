@@ -273,6 +273,8 @@
      
      //Hitonoriol's shit begins here
      #define FLAG_EXISTS(flags,bit)   ((flags) & (1 << (bit)))
+	extern volatile uint32_t mem_free;
+	extern volatile uint32_t mem_unused;
      multiboot_info_t* verify_multiboot(unsigned long magic, unsigned long addr) {
      	multiboot_info_t *mbt_ptr;
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)

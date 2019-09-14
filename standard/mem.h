@@ -4,15 +4,22 @@
 #define BLOCKS_PER_BYTE 8
 #define BLOCK_SIZE 4096
 #define BLOCK_ALIGN BLOCK_SIZE
-#include "ordered_list.h"
 volatile uint32_t mem_size;
 volatile uint32_t blocks_used = 0;
 volatile uint32_t blocks_max;
 volatile uint32_t mmap_len;
 static uint32_t *memory_map;
 volatile uint32_t mb_mmap_len;
-volatile uint32_t mem_unused;
-volatile uint32_t mem_free = 0;//todo remove this shit
+
+volatile uint32_t mem_unused;	//end of memory pointer
+volatile uint32_t mem_free = 0;//free memory in bytes (because i can)
+
+typedef struct {
+   uint32_t start;	//page aligned start and end
+   uint32_t end;
+} mem_t;
+
+mem_t *kernel_mem;
 
 uint32_t malloc(uint32_t);
 extern uint32_t end;
@@ -98,10 +105,9 @@ void *alloc_block() {
 	int frame = find_free_block();
 	if (frame == -1)
 		die(STATUS_NOMEM);
-	mmap_set (frame);
+	mmap_set(frame);
 	uint32_t addr = frame * BLOCK_SIZE;
 	blocks_used++;
-	printf("Phys block 0x%X allocated\n", addr);
 	return (void*)addr;
 }
 
@@ -112,7 +118,8 @@ void free_block (void* p) {
 	blocks_used--;
 }
 
-void* alloc_blocks (size_t size) {
+void *alloc_blocks (size_t size) {
+	printf("Allocating %u phys blocks...\n", size);
 	if ((blocks_used - blocks_max) <= size)
 		die(STATUS_NOMEM);
 	int frame = mmap_first_free_s (size);
@@ -157,6 +164,7 @@ void pmem_init(multiboot_info_t* mbt_ptr) {
         mem_size = mbt_ptr->mem_upper;
         mb_mmap = (_multiboot_memory_map_t*)mbt_ptr->mmap_addr;
         blocks_max = (mem_size*1024) / 4096;
+        printf("Total memory blocks: %u\n", blocks_max);
         mmap_len = blocks_max / BLOCKS_PER_BYTE;
         memory_map = (uint32_t*)malloc(mmap_len);
         memset (memory_map, 0xf, mmap_len);
@@ -196,6 +204,7 @@ uint32_t alloc(uint32_t sz, bool palign) {
         tmp = mem_unused;
         mem_unused += sz;
 	mem_free -= sz;
+	printf("Alloc %u at 0x%X\n", sz, tmp);
         return tmp;
 }
 
@@ -203,26 +212,17 @@ uint32_t amalloc(uint32_t sz) {
 	return alloc(sz, true);
 }
 
-typedef struct {
-   ordered_array_t index;
-   uint32_t start_address;
-   uint32_t end_address;
-   uint32_t max_address;
-   uint8_t supervisor;
-   uint8_t readonly;
-} heap_t;
-
-extern heap_t *heap_kernel;
-extern void *_alloc(uint32_t, uint8_t, heap_t*);
-
 uint32_t malloc(uint32_t sz) {
-	if (heap_kernel == NULL)
+	if (kernel_mem == NULL)
 		return alloc(sz, false);
-	else
-		return (uint32_t)_alloc(sz, 0, heap_kernel);
+	else {
+		printf("Mapped memory left: %u\n", kernel_mem->end - mem_unused);
+		return alloc(sz, false);
+	}
 }
 
 uint32_t get_mem() {
+	printf("Accessible memory: %uB\nVmem start: 0x%X\nVmem end: 0x%X\nMapped memory: %uB\nPhys blocks used: %u\n", mem_free, kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start, blocks_used);
 	return mem_free;
 }
 

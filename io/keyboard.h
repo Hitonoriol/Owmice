@@ -26,10 +26,10 @@ char* kbd_get_string(char* buf) {
 }
 
 void keyboard_handler_main(void) {
+	char keychar;
 	EOI();
 	unsigned char status;
 	char keycode;
-	char keychar;
 	if (!request) return;
 	status = read_port(KEYBOARD_STATUS_PORT);
 		if (status & 0x01) {
