@@ -33,12 +33,13 @@ void kmain(unsigned long magic, unsigned long addr) {
         assume(mboot_ptr->mods_count > 0);
    	uint32_t initrd_location = *((uint32_t*)mboot_ptr->mods_addr);
    	uint32_t initrd_end = *(uint32_t*)(mboot_ptr->mods_addr+4);
-   	kernel_size = ((initrd_end - initrd_location) + (&end - &k_entry)) + 1;
-	mem_free -= kernel_size;
+   	kernel_size = ((uint32_t)&end - (uint32_t)&k_entry);
+	mem_free -= kernel_size + (initrd_end - initrd_location);
    	mem_unused = initrd_end + 1;
    	fs_root = initrd_init(initrd_location);
    	pmem_init(mboot_ptr);
    	mem_deinit_region(initrd_location, (initrd_end - initrd_location));
+   	printf("Kernel: 0x%X 0x%X\n", (uint32_t)&k_entry, (uint32_t)(&end));
    	mem_deinit_region((uint32_t)&k_entry, (uint32_t)(&end - &k_entry));
    	//mem_deinit_region(0x1, 0x9D000);
    	kernel_calls_init();

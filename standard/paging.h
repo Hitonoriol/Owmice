@@ -173,6 +173,45 @@ pagedir_t* get_directory() {
 	return dir_current;
 }
 
+void map_page (uint32_t phys, uint32_t virt) {
+	pagedir_t* tempdir = get_directory();
+	uint32_t* e = &tempdir->entry [PAGEDIR_IDX ((uint32_t) virt)];
+	if ((*e & PAGE_PRESENT) != PAGE_PRESENT) {
+		pagetable_t* table = (pagetable_t*) alloc_block();
+		if (!table)
+			die(STATUS_NOMEM);
+		memset (table, 0, sizeof(pagetable_t));
+		uint32_t* entry = &tempdir->entry [PAGEDIR_IDX((uint32_t)virt)];
+		table_add_property (entry, PDE_PRESENT);
+		table_add_property (entry, PDE_WRITABLE);
+		table_set_frame (entry, (uint32_t)table);
+	}
+	pagetable_t* table = (pagetable_t*) PAGE_ADDR(e);
+	uint32_t* page = &table->entry [PAGETABLE_IDX((uint32_t)virt)];
+	page_set_frame (page, (uint32_t) phys);
+	page_set_property (page, PAGE_PRESENT);
+	page_set_property (page, PAGE_WRITABLE);
+}
+
+void map_pages (uint32_t phys, uint32_t virt, uint32_t amt) {
+	uint32_t step = PAGE_SIZE;
+	while(amt > 0) {
+		map_page(phys, virt);
+		phys += step;
+		virt += step;
+		--amt;
+	}
+	printf("Last mapped page: 0x%X -> 0x%X\n", phys-step, virt-step);
+}
+
+uint32_t size_to_pages(uint32_t sz) {
+	uint32_t res = (sz & 0xFFFFF000) + 0x1000;
+	res /= PAGE_SIZE;
+	if (res == 0)
+		res = 1;
+	return res;
+}
+
 void map_table (uint32_t phys, uint32_t virt) {
 	pagedir_t* tempdir = get_directory();
 	uint32_t* e = &tempdir->entry [PAGEDIR_IDX ((uint32_t) virt)];
@@ -204,6 +243,16 @@ void map_tables(uint32_t phys, uint32_t virt, uint32_t amt) {
 		virt += step;
 		--amt;
 	}
+	printf("Last mapped table: 0x%X -> 0x%X\n", phys-step, virt-step);
+}
+
+uint32_t size_to_tables(uint32_t sz) {
+	uint32_t res = ((0x1000 + (sz & 0xFFFFF000)));
+	printf("s2t: %u %u\n", PAGES_PER_TABLE * PAGE_SIZE, sz);
+	res /= PAGES_PER_TABLE * PAGE_SIZE;
+	if (res == 0)
+		res = 1;
+	return res;
 }
 
 bool alloc_page (uint32_t* e) {
@@ -226,8 +275,9 @@ void free_page (uint32_t* e) {
 #define MEM_INIT_SIZE 4
 extern uint32_t kernel_size;
 void paging_init() {
+	uint32_t size_pa = ((kernel_size&0xFFFFF000) + 0x1000);
 	kernel_mem = (mem_t*)malloc(sizeof(mem_t));
-	kernel_mem->start = KERNEL_VADDR_START + kernel_size;
+	kernel_mem->start = KERNEL_VADDR_START + size_pa;
 	kernel_mem->end = kernel_mem->start + (MEM_INIT_SIZE * 0x100000);
 	printf("Initializing paging... ");
 	pagetable_t* table = (pagetable_t*) alloc_block();
@@ -269,8 +319,9 @@ void paging_init() {
 	irq_map_handler(14, (unsigned long)pagefault);
 	if (!switch_directory(dir))
 		die(0xD1);
-	printf("%u kernel pages\n", ((0x1000+(kernel_size&0xFFFFF000))/1024));
-	map_tables(KERNEL_PHYS_START, KERNEL_VADDR_START, ((0x1000+(kernel_size&0xFFFFF000))/1024)+MEM_INIT_SIZE + 1);
+	uint32_t pages = size_to_pages((MEM_INIT_SIZE * 0x100000) + size_pa);
+	printf("%u kernel pages| kernel size: 0x%X\n", pages, kernel_size);
+	map_pages(KERNEL_PHYS_START, KERNEL_VADDR_START, pages);
 	paging_enable();
 	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	mem_unused = kernel_mem->start;

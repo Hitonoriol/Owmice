@@ -222,7 +222,9 @@ uint32_t malloc(uint32_t sz) {
 }
 
 uint32_t get_mem() {
-	printf("Accessible memory: %uB\nVmem start: 0x%X\nVmem end: 0x%X\nMapped memory: %uB\nPhys blocks used: %u\n", mem_free, kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start, blocks_used);
+	printf("Total accessible memory: %uB\nUsable vmem start: 0x%X\nUsable vmem end: 0x%X\nTotal mapped memory: %uB\nPhys blocks used: %u\nPhys blocks free: %u",
+	mem_free, kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start, blocks_used,
+	blocks_max - blocks_used);
 	return mem_free;
 }
 
