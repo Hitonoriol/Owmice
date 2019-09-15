@@ -15,6 +15,7 @@
 #include "owshell/owshell.h"
 #include "io/keyboard.h"
 #include "misc/multiboot.h"
+#include "standard/heap.h"
 #include "standard/mem.h"
 #include "io/vfs.h"
 #include "io/initrd.h"
@@ -25,6 +26,7 @@ extern uint32_t k_entry;
 extern volatile uint32_t kticks;
 uint32_t kernel_size;
 task_t owshell;
+
 void kmain(unsigned long magic, unsigned long addr) {
 	create_gdt();
 	idt_init();
@@ -52,6 +54,7 @@ void kmain(unsigned long magic, unsigned long addr) {
         cprint("Ready!", VGA_COLOR_MAGENTA);
 	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
 	draw_clock();
+	malloc(1);
 	while(1) {
 		task_sleep(&task_main, 100);
 		draw_clock();

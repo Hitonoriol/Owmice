@@ -115,7 +115,7 @@ void cat_initrd(char* fname) {
 	for (j = 0; j < sz; j++)
 		term_putchar(buf[j]);
 	term_writestring("\n");
-	free(512);
+	free((uint32_t)buf);
 }
 
 void ls_initrd() {

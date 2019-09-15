@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "../screen/terminal.h"
 #include "../standard/strings.h"
+#include "owapi.h"
 char* tbuf;
 static char* cmd[]={", ", "die", "exit","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now", "lstasks"};
 
@@ -29,17 +30,17 @@ void execute(char* com) {
 		else if (streq(com, "help"))
 			whelp();
 		else if (streq(com, "die"))
-			die(STATUS_GENERAL);
+			owmice_die(STATUS_GENERAL);
 		else if (streq(com, "cls"))
-			term_cls();
+			owmice_term_cls();
 		else if (streq(com, "ticks"))
 			printf("Ticks: %d\nUptime: %d seconds", kticks, kticks/100);
 		else if (streq(com, "lsrd"))
 			ls_initrd();
 		else if (streq(com, "mem"))
-			get_mem();
+			owmice_get_mem();
 		else if (streq(com, "now"))
-			today();
+			owmice_now();
 		else if (streq(com, "lstasks"))
 			task_list();
 		else if (strtok(tbuf, com, " ") != NULL){

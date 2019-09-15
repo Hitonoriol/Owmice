@@ -188,8 +188,12 @@ void pmem_init(multiboot_info_t* mbt_ptr) {
 }
 
 void free(uint32_t sz) {
-	mem_unused -= sz;
-	mem_free += sz;
+	if (kernel_mem == NULL) {
+		mem_unused -= sz;
+		mem_free += sz;
+	} else {
+		k_heapLCABFree(&kernel_heap, (void*)sz);
+	}
 }
 
 uint32_t alloc(uint32_t sz, bool palign) {
@@ -204,27 +208,30 @@ uint32_t alloc(uint32_t sz, bool palign) {
         tmp = mem_unused;
         mem_unused += sz;
 	mem_free -= sz;
-	printf("Alloc %u at 0x%X\n", sz, tmp);
+	printf("Offset alloc %u at 0x%X\n", sz, tmp);
         return tmp;
 }
 
 uint32_t amalloc(uint32_t sz) {
-	return alloc(sz, true);
+	if (kernel_mem == NULL)
+		return alloc(sz, true);
+	else {
+		return (uint32_t)k_heapLCABAlloc(&kernel_heap, sz + 0x1000) & 0xFFFFF000;
+	}
 }
 
 uint32_t malloc(uint32_t sz) {
 	if (kernel_mem == NULL)
 		return alloc(sz, false);
 	else {
-		printf("Mapped memory left: %u\n", kernel_mem->end - mem_unused);
-		return alloc(sz, false);
+		return (uint32_t)k_heapLCABAlloc(&kernel_heap, sz);
 	}
 }
 
 uint32_t get_mem() {
-	printf("Total accessible memory: %uB\nUsable vmem start: 0x%X\nUsable vmem end: 0x%X\nTotal mapped memory: %uB\nPhys blocks used: %u\nPhys blocks free: %u",
+	printf("Total accessible memory: %uB\nUsable vmem : 0x%X - 0x%X\nTotal mapped memory: %uB\nPhys blocks used: %u/%u (%u free)",
 	mem_free, kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start, blocks_used,
-	blocks_max - blocks_used);
+	blocks_max, blocks_max - blocks_used);
 	return mem_free;
 }
 

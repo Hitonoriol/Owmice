@@ -279,6 +279,7 @@ void paging_init() {
 	kernel_mem = (mem_t*)malloc(sizeof(mem_t));
 	kernel_mem->start = KERNEL_VADDR_START + size_pa;
 	kernel_mem->end = kernel_mem->start + (MEM_INIT_SIZE * 0x100000);
+	
 	printf("Initializing paging... ");
 	pagetable_t* table = (pagetable_t*) alloc_block();
 	if (!table)
@@ -304,7 +305,7 @@ void paging_init() {
 		table->entry[PAGETABLE_IDX(virt)] = page;
 	}
 	pagedir_t* dir = (pagedir_t*) alloc_blocks(3);
-	printf("Dir addr: 0x%X\n", (uint32_t*)dir);
+	printf("Pagedir addr: 0x%X\n", (uint32_t*)dir);
 	if (!dir)
 		die(0x366);
 	memset (dir, 0, sizeof (pagedir_t));
@@ -323,7 +324,9 @@ void paging_init() {
 	printf("%u kernel pages| kernel size: 0x%X\n", pages, kernel_size);
 	map_pages(KERNEL_PHYS_START, KERNEL_VADDR_START, pages);
 	paging_enable();
-	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	mem_unused = kernel_mem->start;
+	k_heapLCABInit(&kernel_heap);
+	k_heapLCABAddBlock(&kernel_heap, kernel_mem->start, MEM_INIT_SIZE * 0x100000);
+	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	printf("Done!\n");
 }

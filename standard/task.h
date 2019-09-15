@@ -35,7 +35,6 @@ void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
 	task->regs.eip = (uint32_t) main;
 	task->entrypoint = task->regs.eip;
 	task->regs.esp = amalloc(0x1000);
-	printf("new stack: 0x%X\n", task->regs.esp);
 	task->next = &task_main;
 	task_main.prev = task;
 	task_yield();
