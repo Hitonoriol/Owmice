@@ -22,7 +22,6 @@ extern uint32_t malloc(uint32_t sz);
 extern char* kbd_get_string(char* buf);
 extern void cat_initrd(char* fname);
 extern void task_list();
-extern uint32_t get_mem();
 void execute(char* com) {
 		clearchar(tbuf);
 		if (streq(com, "exit"))
@@ -43,7 +42,7 @@ void execute(char* com) {
 			owmice_now();
 		else if (streq(com, "lstasks"))
 			task_list();
-		else if (strtok(tbuf, com, " ") != NULL){
+		else if (strchr(com, (int)' ') && strtok(tbuf, com, " ") != NULL){
 			if (streq(tbuf, "catrd"))
 				cat_initrd(strtok(tbuf, com, " "));
 		} else
@@ -60,6 +59,6 @@ void owshell_main() {
 		execute(cmd);
 	}
 	cprint("End of session.", VGA_COLOR_MAGENTA);
-	task_end();
+	task_self_kill();
 }
 #endif

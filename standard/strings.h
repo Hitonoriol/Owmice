@@ -3,6 +3,13 @@
 char nullterm = '\0';
 char linebreak = '\n';
 
+char *strchr(const char *s, int c) {
+    while (*s != (char)c)
+        if (!*s++)
+            return 0;
+    return (char *)s;
+}
+
 int abs(int num) {
 	if (num < 0)
 		return num * (-1);
@@ -76,7 +83,6 @@ char *strcat(char *dest, const char *src) {
 }
 
 extern uint32_t malloc(uint32_t sz);
-extern void kfree(void *p);
 extern void *memset(void* bufptr, int value, size_t size);
 char *clearchar(char *str) {
 	memset(str, 0, strlen(str));

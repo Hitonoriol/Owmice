@@ -11,11 +11,10 @@ volatile uint32_t mmap_len;
 static uint32_t *memory_map;
 volatile uint32_t mb_mmap_len;
 
-volatile uint32_t mem_unused;	//end of memory pointer
-volatile uint32_t mem_free = 0;//free memory in bytes (because i can)
+volatile uint32_t mem_unused;	//end of memory pointer for offset alloc
 
 typedef struct {
-   uint32_t start;	//page aligned start and end
+   uint32_t start;
    uint32_t end;
 } mem_t;
 
@@ -163,7 +162,7 @@ void pmem_init(multiboot_info_t* mbt_ptr) {
 	mb_mmap_len = mbt_ptr->mmap_length;
         mem_size = mbt_ptr->mem_upper;
         mb_mmap = (_multiboot_memory_map_t*)mbt_ptr->mmap_addr;
-        blocks_max = (mem_size*1024) / 4096;
+        blocks_max = (mem_size * 1024) / 4096;
         printf("Total memory blocks: %u\n", blocks_max);
         mmap_len = blocks_max / BLOCKS_PER_BYTE;
         memory_map = (uint32_t*)malloc(mmap_len);
@@ -179,18 +178,17 @@ void pmem_init(multiboot_info_t* mbt_ptr) {
         	if (mb_mmap->type == 1)
 			mem_init_region(mb_mmap->base_addr_low, mb_mmap->length_low);
 		else {
-			mem_free -= mb_mmap->length_low;
 			mem_deinit_region(mb_mmap->base_addr_low, mb_mmap->length_low);
 		}
 		mb_mmap = (_multiboot_memory_map_t*) ((unsigned int)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size));
 	}
 	term_revertcolor();
+	mem_size *= 1024;
 }
 
 void free(uint32_t sz) {
 	if (kernel_mem == NULL) {
 		mem_unused -= sz;
-		mem_free += sz;
 	} else {
 		k_heapLCABFree(&kernel_heap, (void*)sz);
 	}
@@ -198,16 +196,12 @@ void free(uint32_t sz) {
 
 uint32_t alloc(uint32_t sz, bool palign) {
 	uint32_t tmp = mem_unused;
-	if (sz > mem_free)
-		die(STATUS_NOMEM);
 	if (palign && (mem_unused & 0xFFFFF000)) {
     		mem_unused &= 0xFFFFF000;
     		mem_unused += 0x1000;
-    		mem_free -= 0x1000 + (tmp - mem_unused);
 	}
         tmp = mem_unused;
         mem_unused += sz;
-	mem_free -= sz;
 	printf("Offset alloc %u at 0x%X\n", sz, tmp);
         return tmp;
 }
@@ -228,11 +222,14 @@ uint32_t malloc(uint32_t sz) {
 	}
 }
 
-uint32_t get_mem() {
-	printf("Total accessible memory: %uB\nUsable vmem : 0x%X - 0x%X\nTotal mapped memory: %uB\nPhys blocks used: %u/%u (%u free)",
-	mem_free, kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start, blocks_used,
-	blocks_max, blocks_max - blocks_used);
-	return mem_free;
+uint32_t get_free_mem() {
+	return (blocks_max - blocks_used) * 0x1000;
+}
+
+void get_mem() {
+	printf("Total physical memory: %uB\nPhysical blocks used: %u/%u (%u free)\n", mem_size, blocks_used, blocks_max, get_free_mem() / 0x1000);
+	printf("Usable kernel vmem : 0x%X - 0x%X (%uB)\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
+	printf("Kernel heap: %uB/%uB (%uB free)", kernel_heap.mem_in_use, kernel_heap.size, kernel_heap.size - kernel_heap.mem_in_use);
 }
 
 #endif

@@ -324,9 +324,9 @@ void paging_init() {
 	printf("%u kernel pages| kernel size: 0x%X\n", pages, kernel_size);
 	map_pages(KERNEL_PHYS_START, KERNEL_VADDR_START, pages);
 	paging_enable();
-	mem_unused = kernel_mem->start;
 	k_heapLCABInit(&kernel_heap);
 	k_heapLCABAddBlock(&kernel_heap, kernel_mem->start, MEM_INIT_SIZE * 0x100000);
+	malloc(PAGE_SIZE);	//safety offset(i sheeded my pants somewhere)
 	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	printf("Done!\n");
 }

@@ -20,11 +20,14 @@ typedef struct _KHEAPBLOCKLCAB {
 typedef struct _KHEAPLCAB {
 	KHEAPBLOCKLCAB		       *fblock;
 	uint32				bcnt;
+	uint32				mem_in_use;
+	uint32				size;
 } KHEAPLCAB;
 
 void k_heapLCABInit(KHEAPLCAB *heap) {
 		heap->fblock = 0;
 		heap->bcnt = 0;
+		heap->mem_in_use = 0;
 }
 
 int k_heapLCABAddBlock(KHEAPLCAB *heap, uintptr addr, uint32 size) {
@@ -32,7 +35,7 @@ int k_heapLCABAddBlock(KHEAPLCAB *heap, uintptr addr, uint32 size) {
 	KHEAPHDRLCAB			*hdr;
 	
 	//printf("add block addr:%p size:%x\n", addr, size);
-	
+	heap->size += size;
 	hb = (KHEAPBLOCKLCAB*)addr;
 	hb->size = size;
 	hb->used = 0;
@@ -84,7 +87,8 @@ void k_heapLCABFree(KHEAPLCAB *heap, void *ptr) {
 			//printf("hdr 0x%X\n", (uint32_t*)hdr);
 			/* set to free */
 			hdr->flagsize &= ~0x80000000;
-			
+			printf("free %u\n", hdr->flagsize);
+			heap->mem_in_use -= hdr->flagsize;
 			hb->used -= hdr->flagsize;
 			
 			/* get previous header if it exists */
@@ -111,6 +115,7 @@ void k_heapLCABFree(KHEAPLCAB *heap, void *ptr) {
 					/* combine with it */
 					hdr->flagsize += sizeof(KHEAPHDRLCAB) + nhdr->flagsize;
 					hb->used -= sizeof(KHEAPHDRLCAB);
+					heap->mem_in_use -= sizeof(KHEAPHDRLCAB);
 					/* set next header prevsize */
 					nhdr = (KHEAPHDRLCAB*)((uintptr)&hdr[1] + hdr->flagsize);
 					nhdr->prevsize = hdr->flagsize;
@@ -126,6 +131,7 @@ void k_heapLCABFree(KHEAPLCAB *heap, void *ptr) {
 					//printf("combine backward\n");
 					phdr->flagsize += sizeof(KHEAPHDRLCAB) + hdr->flagsize;
 					hb->used -= sizeof(KHEAPHDRLCAB);
+					heap->mem_in_use -= sizeof(KHEAPHDRLCAB);
 					hdr = phdr;
 					/* set next header prevsize */
 					nhdr = (KHEAPHDRLCAB*)((uintptr)&hdr[1] + hdr->flagsize);
@@ -145,9 +151,9 @@ void k_heapLCABFree(KHEAPLCAB *heap, void *ptr) {
 		}
 	}
 	
-	printf("uhoh ptr:%p\n", ptr);
+	printf("uhoh ptr:0x%X\n", ptr);
 	for (hb = heap->fblock; hb; hb = hb->next) {
-		printf("lcab free looking at block:%p next:%p ptr:%p end:%p\n", hb, hb->next, ptr, (uintptr)hb + hb->size);
+		printf("lcab free looking at block:0x%X next:0x%X ptr:0x%X end:0x%X\n", hb, hb->next, ptr, (uintptr)hb + hb->size);
 		if (((uintptr)ptr > (uintptr)hb)) {
 			printf("above\n");
 			if (((uintptr)ptr < ((uintptr)hb + hb->size))) {
@@ -218,6 +224,7 @@ void* k_heapLCABAlloc(KHEAPLCAB *heap, uint32 size) {
 							hdr->flagsize = 0x80000000 | size;
 							//printf("CC\n");
 							hb->used += sizeof(KHEAPHDRLCAB);
+							heap->mem_in_use += sizeof(KHEAPHDRLCAB);
 							//printf("DD\n");
 						} else {
 							/* simply set to used */
@@ -227,7 +234,8 @@ void* k_heapLCABAlloc(KHEAPLCAB *heap, uint32 size) {
 						
 						//printf("ptr:%p\n", &hdr[1]);
 						//printf("alloced checks:%u blocks-checked:%u\n", checks, bc);
-						
+						heap->mem_in_use += size;
+						//printf("heap alloc 0x%X\n", &hdr[1]);
 						return &hdr[1];
 					}
 				}

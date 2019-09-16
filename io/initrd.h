@@ -108,6 +108,7 @@ fs_node_t *initrd_init(uint32_t location) {
 }
 
 void cat_initrd(char* fname) {
+	printf("Contents of %s:\n", fname);
 	char *buf = (char*)malloc(512);
 	fs_node_t *fsnode = finddir_fs(fs_root, fname);
 	uint32_t sz = read_fs(fsnode, 0, 512, (uint8_t*)buf);

@@ -49,10 +49,12 @@ void task_kill(task_t *task) {
 		task_last = task->prev;
 	task->prev->next = task->next;
 	task->next->prev = task->prev;
+	task_current = &task_main;
 	//free task stack and state
 }
 
-void task_end() {
+void task_self_kill() {
+	printf("Task end request: PID %u\n", task_current->id);
 	task_kill(task_current);
 }
 

@@ -273,7 +273,6 @@
      
      //Hitonoriol's shit begins here
      #define FLAG_EXISTS(flags,bit)   ((flags) & (1 << (bit)))
-	extern volatile uint32_t mem_free;
 	extern volatile uint32_t mem_unused;
      multiboot_info_t* verify_multiboot(unsigned long magic, unsigned long addr) {
      	multiboot_info_t *mbt_ptr;
@@ -282,8 +281,7 @@
 	mbt_ptr = (multiboot_info_t *) addr;
 	term_tempcolor(VGA_COLOR_LIGHT_GREEN);
 	if (FLAG_EXISTS(mbt_ptr->flags, 0)) {
-		mem_free = (((unsigned)mbt_ptr->mem_upper) * 1024);
-        	printf("Total physical memory: %uB\n", mem_free);
+        	printf("Total physical memory: %uB\n", (((unsigned)mbt_ptr->mem_upper) * 1024));
 	}
         if (FLAG_EXISTS(mbt_ptr->flags, 1))
         	printf ("Bootdev: 0x%X\n", (unsigned)mbt_ptr->boot_device);
