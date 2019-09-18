@@ -1,11 +1,15 @@
 #ifndef _IO_KEYBOARD_H
 #define _IO_KEYBOARD_H
 #define INPUT_MAXLEN 128
+#define KBD_STRING 1
+#define KBD_CHAR 2
 extern char in_buffer;	//Reserved in asm bootstrap, 129 bytes
 char *con_input = &in_buffer;
 volatile int bufpos = 0;
-volatile bool request = false;
+volatile uint8_t request = 0;
 char *charbuffer = "a";
+char keychar;
+
 void kbd_init(void) {
 	printf("Setting up keyboard driver... ");
 	irq_map_handler(IRQ_KEYBOARD, (unsigned long)keyboard_handler);
@@ -15,8 +19,10 @@ void kbd_init(void) {
 }
 
 char* kbd_get_string(char* buf) {
+	if (request)
+		return NULL;
 	default_cursor();
-	request = true;
+	request = KBD_STRING;
 	while(request)
 		wait_int();
 	strcpy(buf, con_input);
@@ -25,8 +31,17 @@ char* kbd_get_string(char* buf) {
 	return buf;
 }
 
+char kbd_get_char() {
+	if (request)
+		return 0;
+	hidecur();
+	request = KBD_CHAR;
+	while(request)
+		wait_int();
+	return keychar;
+}
+
 void keyboard_handler_main(void) {
-	char keychar;
 	EOI();
 	unsigned char status;
 	char keycode;
@@ -39,7 +54,7 @@ void keyboard_handler_main(void) {
 			if (keycode < 0) return;
 			else if(keycode == ENTER_KEY_CODE) {
 				term_putchar('\n');
-				request = false;
+				request = 0;
 				bufpos = 0;
 				return;
 			} else if (keychar == '\b'){
@@ -56,6 +71,11 @@ void keyboard_handler_main(void) {
 				if (bufpos >= INPUT_MAXLEN)
 					return;
 				bufpos++;
+				if (request == KBD_CHAR) {
+					request = 0;
+					bufpos = 0;
+					return;
+				}
 				memcpy(charbuffer, &keychar, 1);
 				con_input = strcat(con_input, charbuffer);
 				term_putchar(keychar);

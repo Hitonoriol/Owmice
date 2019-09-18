@@ -44,6 +44,10 @@ void task_sleep(task_t *task, uint32_t ticks) {
 	task->sleeptime = ticks;
 }
 
+void task_self_sleep(uint32_t ticks) {
+	task_sleep(task_current, ticks);
+}
+
 void task_kill(task_t *task) {
 	if (task == task_last)
 		task_last = task->prev;

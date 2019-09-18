@@ -8,6 +8,7 @@
 #include "standard/strings.h"
 #include "screen/terminal.h"
 #include "standard/stdio.h"
+#include "io/ATA.h"
 #include "io/idt.h"
 #include "standard/task.h"
 #include "io/timer.h"
@@ -26,6 +27,24 @@ extern uint32_t k_entry;
 extern volatile uint32_t kticks;
 uint32_t kernel_size;
 task_t owshell;
+
+void test_disk() {
+	master = newATA(1, 0x1F0);
+	if(ATA_identify(master) != 0) {
+		printf("Can't access the hard disk.\n");
+		return;
+	}
+	printf("Found master hard disk!\nWould you like to do a write test? [y/n]\n");
+	if (kbd_get_char() != 'y')
+		return;
+	printf("Write test...\n");
+	if(ATA_write28(master, 0, (uint8_t*)"Yo wassup\n\0") != 0) {
+		printf("Write test failed.\n");
+	}
+	char* firstSector = (char*)ATA_read28(master, 0);
+	printf("First sector: %s\n", firstSector);
+	free((uint32_t)firstSector);
+}
 
 void kmain(unsigned long magic, unsigned long addr) {
 	create_gdt();
@@ -49,9 +68,9 @@ void kmain(unsigned long magic, unsigned long addr) {
 	tasking_init();
 	timer_init(PIT_10MSEC);
         cprint("Ready!", VGA_COLOR_MAGENTA);
+        test_disk();
 	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
 	draw_clock();
-	malloc(1);
 	while(1) {
 		task_sleep(&task_main, 100);
 		draw_clock();

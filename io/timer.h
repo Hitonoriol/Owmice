@@ -18,7 +18,6 @@ void sleep (uint32_t msec) {	//global sleep(stops scheduler because he can)
 	}
 }
 
-extern volatile bool request;
 void pit_handler_main() {
 	EOI();
 	task_yield();

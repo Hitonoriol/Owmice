@@ -87,7 +87,7 @@ void k_heapLCABFree(KHEAPLCAB *heap, void *ptr) {
 			//printf("hdr 0x%X\n", (uint32_t*)hdr);
 			/* set to free */
 			hdr->flagsize &= ~0x80000000;
-			printf("free %u\n", hdr->flagsize);
+			//printf("free %u\n", hdr->flagsize);
 			heap->mem_in_use -= hdr->flagsize;
 			hb->used -= hdr->flagsize;
 			

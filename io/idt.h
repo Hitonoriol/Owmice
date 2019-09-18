@@ -16,6 +16,20 @@ extern void keyboard_handler(void);
 extern char read_port(unsigned short port);
 extern void write_port(unsigned short port, unsigned char data);
 extern void load_idt(unsigned long *idt_ptr);
+
+void cli(void) { asm volatile("cli"); }
+void sti(void) { asm volatile ("sti"); }
+
+uint16_t read_port16(uint16_t port) {
+	uint16_t ret;
+	asm volatile("inw %1, %0": "=a" (ret) : "dN" (port));
+	return ret;
+}
+
+void port_write16(uint16_t port, uint16_t value) {
+	asm volatile("outw %1, %0" : : "dN" (port), "a" (value));
+}
+
 struct IDT_entry {
 	unsigned short int offset_lowerbits;
 	unsigned short int selector;
