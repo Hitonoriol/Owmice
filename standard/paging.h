@@ -137,6 +137,7 @@ void pagefault(registers_t regs) {
 
 	setcolor(VGA_COLOR_LIGHT_CYAN);
 	printf("\nPagefault at 0x%X\n", addr);
+	map_page
 	if (present) printf("Not present\n");
    	if (rw) printf("RO\n");
    	if (us) printf("Usermode\n");
@@ -326,6 +327,7 @@ void paging_init() {
 	paging_enable();
 	k_heapLCABInit(&kernel_heap);
 	k_heapLCABAddBlock(&kernel_heap, kernel_mem->start, MEM_INIT_SIZE * 0x100000);
+	malloc(PAGE_SIZE * 4);
 	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	printf("Done!\n");
 }

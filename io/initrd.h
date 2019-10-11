@@ -111,7 +111,7 @@ void cat_initrd(char* fname) {
 	printf("Contents of %s:\n", fname);
 	char *buf = (char*)malloc(512);
 	fs_node_t *fsnode = finddir_fs(fs_root, fname);
-	uint32_t sz = read_fs(fsnode, 0, 512, (uint8_t*)buf);
+	uint32_t sz = read_fs(fsnode, 0, 32, (uint8_t*)buf);
 	uint32_t j;
 	for (j = 0; j < sz; j++)
 		term_putchar(buf[j]);

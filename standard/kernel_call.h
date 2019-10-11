@@ -15,7 +15,7 @@ void kcall_handle() {
 	get_regs();
 	if (regdump.eax >= CALLS)
 		return;	
-	tasking_pause();
+	//tasking_pause();
 	printf("[Kernel call #%u]\n", regdump.eax);
 	void *location = syscalls[regdump.eax];
 	int ret;
@@ -33,8 +33,6 @@ void kcall_handle() {
 	pop %%ebx; "
 	: "=a" (ret)
 	: "r" (regdump.edi), "r" (regdump.esi), "r" (regdump.edx), "r" (regdump.ecx), "r" (regdump.ebx), "r" (location));
-	printf("%u end\n", regdump.eax);
-	tasking_resume();
 	EOI();
 }
 

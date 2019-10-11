@@ -17,9 +17,12 @@ task_t task_main;
 volatile uint32_t lid = 0;
 extern uint32_t amalloc(uint32_t);
 void task_yield();
-
+void task_switch(task_regs_t *, task_regs_t *);
+void save_task_state();
 void tasking_pause() {
 	skip = true;
+	save_task_state();
+	task_switch(&task_current->regs, &task_main.regs);
 }
 
 void tasking_resume() {
