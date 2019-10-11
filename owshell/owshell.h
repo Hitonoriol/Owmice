@@ -5,7 +5,7 @@
 #include "../standard/strings.h"
 #include "owapi.h"
 char* tbuf;
-static char* cmd[]={", ", "die", "exit","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now", "lstasks"};
+char* cmd[]={", ", "die", "exit","cls","help", "ticks", "lsrd", "catrd <file>", "mem", "now", "lstasks"};
 
 void whelp() {
 	int CMDS = (sizeof(cmd) / sizeof(cmd[0])) - 1;

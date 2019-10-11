@@ -10,18 +10,13 @@ static void *syscalls[CALLS] = {
 	&term_cls
 };
 
-extern void kcall_entry(void);
-
-void kernel_calls_init() {
-	irq_map_handler(0x99, (unsigned long)kcall_entry);
-}
-
 extern volatile registers_t regdump;
-void kcall_handle(registers_t *regs) {
+void kcall_handle() {
 	get_regs();
-	printf("[Kernel call #%u]\n", regdump.eax);
 	if (regdump.eax >= CALLS)
-		die(0xBADCA11);
+		return;	
+	tasking_pause();
+	printf("[Kernel call #%u]\n", regdump.eax);
 	void *location = syscalls[regdump.eax];
 	int ret;
 	asm volatile (" \
@@ -38,6 +33,11 @@ void kcall_handle(registers_t *regs) {
 	pop %%ebx; "
 	: "=a" (ret)
 	: "r" (regdump.edi), "r" (regdump.esi), "r" (regdump.edx), "r" (regdump.ecx), "r" (regdump.ebx), "r" (location));
+	printf("%u end\n", regdump.eax);
+	tasking_resume();
 	EOI();
 }
 
+void kernel_calls_init() {
+	irq_map_handler(0x99, (uint32_t)kcall_handle);
+}

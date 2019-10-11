@@ -50,7 +50,7 @@ bool get_time(uint16_t * hours, uint16_t * minutes, uint16_t * seconds) {
 	*hours   = from_bcd(values[4]);
 	*hours   += timezone;
 	if (*hours >= 24) {
-		*hours = 24 - *hours;
+		*hours = *hours - 24;
 		ovf = true;
 	}
 	*minutes = from_bcd(values[2]);

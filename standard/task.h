@@ -10,15 +10,24 @@ typedef struct task_s {
 	struct task_s *next;
 	struct task_s *prev;
 } task_t;
-
+static bool skip = false;
 static task_t *task_current;
 static task_t *task_last;
-static task_t task_main;
+task_t task_main;
 volatile uint32_t lid = 0;
 extern uint32_t amalloc(uint32_t);
 void task_yield();
 
+void tasking_pause() {
+	skip = true;
+}
+
+void tasking_resume() {
+	skip = false;
+}
+
 void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
+	tasking_pause();
 	task->id = ++lid;
 	task_last->next = task;
 	task->prev = task_last;
@@ -37,6 +46,7 @@ void task_spawn(task_t *task, void (*main)(), uint32_t flags) {
 	task->regs.esp = amalloc(0x1000);
 	task->next = &task_main;
 	task_main.prev = task;
+	tasking_resume();
 	task_yield();
 }
 
@@ -49,12 +59,14 @@ void task_self_sleep(uint32_t ticks) {
 }
 
 void task_kill(task_t *task) {
+	tasking_pause();
 	if (task == task_last)
 		task_last = task->prev;
 	task->prev->next = task->next;
 	task->next->prev = task->prev;
 	task_current = &task_main;
 	//free task stack and state
+	tasking_resume();
 }
 
 void task_self_kill() {
@@ -161,9 +173,24 @@ void task_list() {
 	term_undo_nl();
 }
 
+void save_task_state() {
+	get_regs();
+	task_regs_t *regs = &task_current->regs;
+	regs->eax = regdump.eax;
+	regs->ebx = regdump.ebx;
+	regs->ecx = regdump.ecx;
+	regs->edx = regdump.edx;
+	regs->esi = regdump.esi;
+	regs->edi = regdump.edi;
+	regs->esp = regdump.esp;
+}
+
 void task_yield() {
+	if (skip)
+		return;
 	if (task_current->next == task_current)
 		return;
+	save_task_state();
 	task_t *last = task_current;
 	task_current = task_current->next;
 	if (task_current->sleeptime > 0) {

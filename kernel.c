@@ -34,7 +34,9 @@ void test_disk() {
 		printf("Can't access the hard disk.\n");
 		return;
 	}
-	printf("Found master hard disk!\nWould you like to do a write test? [y/n]\n");
+	printf("*Found master hard disk!\n");
+	return;	
+	printf("Would you like to do a write test? [y/n]\n");
 	if (kbd_get_char() != 'y')
 		return;
 	printf("Write test...\n");
@@ -70,7 +72,6 @@ void kmain(unsigned long magic, unsigned long addr) {
         cprint("Ready!", VGA_COLOR_MAGENTA);
         test_disk();
 	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
-	draw_clock();
 	while(1) {
 		task_sleep(&task_main, 100);
 		draw_clock();

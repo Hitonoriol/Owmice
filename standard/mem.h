@@ -210,7 +210,7 @@ uint32_t amalloc(uint32_t sz) {
 	if (kernel_mem == NULL)
 		return alloc(sz, true);
 	else {
-		return (uint32_t)k_heapLCABAlloc(&kernel_heap, sz + 0x1000) & 0xFFFFF000;
+		return ((uint32_t)k_heapLCABAlloc(&kernel_heap, sz + 0x1000) & 0xFFFFF000);
 	}
 }
 
