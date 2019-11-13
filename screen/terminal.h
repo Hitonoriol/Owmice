@@ -187,13 +187,23 @@ void console_init() {
 }
 
 #define CLOCK_OFFSET 67
-extern void today();
+extern int today();
 void draw_clock() {
 	write_statusbar(CLOCK_OFFSET);
 	uint8_t color = vga_entry_color(VGA_COLOR_BLACK, STATUSBAR_BG);
 	uint8_t tmp = term_color;
 	term_color = color;
 	today();
+	term_color = tmp;
+	statusbar_rev();
+}
+
+void term_set_title(char* str) {
+	write_statusbar(VGA_WIDTH - strlen(str));
+	uint8_t color = vga_entry_color(VGA_COLOR_BLACK, STATUSBAR_BG);
+	uint8_t tmp = term_color;
+	term_color = color;
+	term_writestring(str);
 	term_color = tmp;
 	statusbar_rev();
 }

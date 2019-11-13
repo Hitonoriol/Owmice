@@ -44,6 +44,7 @@ keyboard_handler:
 
 global _start
 _start:
+	mov esp, stack_space
 	cli
 	push ebx
 	push eax
@@ -51,20 +52,37 @@ _start:
 	call kmain
 	hlt
 
-extern pit_handler_main
-global pit_handler
-pit_handler:
-	pushad
-	cld
-	call pit_handler_main
-	popad
-	iretd
+extern kcall_handle
+global syscall
+syscall:
+	push ebp
+	mov ebp, esp
 
-extern kcall_handle	
-global kcall_entry
-kcall_entry:
+	push dword [ebp + 16]
+	push dword [ebp + 12]
+	push dword [ebp + 8]	
+
 	call kcall_handle
-	iretd
+
+	add esp, 12
+
+	pop ebp
+	ret
+
+;extern pit_handler_main
+;global pit_handler
+;pit_handler:
+;	pushad
+;	cld
+;	call pit_handler_main
+;	popad
+;	iretd
+
+;extern kcall_handle	
+;global kcall_entry
+;kcall_entry:
+;	call kcall_handle
+;	iretd
 
 global create_gdt
 
@@ -119,8 +137,8 @@ dump_stack:
   ret
 
 global in_buffer
-in_buffer: times 129 db 0
+in_buffer: times 130 db 0
 
 section .bss
-resb 8096
+resb 16192
 stack_space:

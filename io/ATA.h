@@ -1,5 +1,5 @@
 #define BYTES_PER_SECTOR 512
-
+extern uint32_t malloc(uint32_t sz);
 struct ATA_INTERFACE {
 	uint8_t master;
 	uint16_t dataPort;

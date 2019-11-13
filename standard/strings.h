@@ -82,7 +82,6 @@ char *strcat(char *dest, const char *src) {
     return dest;
 }
 
-extern uint32_t malloc(uint32_t sz);
 extern void *memset(void* bufptr, int value, size_t size);
 char *clearchar(char *str) {
 	memset(str, 0, strlen(str));
@@ -147,12 +146,6 @@ char *strtok(char *dest, char *src, char *delim) {
 	if (dest[0] == nullterm)
 		return NULL;
 	return dest;
-}
-
-void striterall(char *src, char *delim, void (*callback)()) {
-	char *dest = (char*)malloc(64);
-        while (strtok(dest, src, " ") != NULL)
-        	callback(dest);
 }
 
 char *substr(char *dest, char *src, int position, int length) {

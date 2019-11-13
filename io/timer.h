@@ -19,11 +19,11 @@ void sleep (uint32_t msec) {	//global sleep(stops scheduler because he can)
 }
 
 void pit_handler_main() {
-	EOI();
-	task_yield();
+	//task_yield();
 	kticks++;
 	if (sleep_amt > 0)
 		sleep_amt -= 10;
+	EOI();
 }
 
 void timer_init(uint32_t frequency) {

@@ -1,3 +1,5 @@
+#include "owshell/owshell.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -8,25 +10,25 @@
 #include "standard/strings.h"
 #include "screen/terminal.h"
 #include "standard/stdio.h"
+#include "system/system.h"
 #include "io/ATA.h"
 #include "io/idt.h"
-#include "standard/task.h"
-#include "io/timer.h"
-#include "standard/cmos.h"
-#include "owshell/owshell.h"
+//#include "standard/task.h"
+//#include "io/timer.h"
+#include "io/cmos.h"
 #include "io/keyboard.h"
 #include "misc/multiboot.h"
-#include "standard/heap.h"
-#include "standard/mem.h"
+#include "mem/heap.h"
+#include "mem/mem.h"
 #include "io/vfs.h"
 #include "io/initrd.h"
-#include "standard/paging.h"
-#include "standard/kernel_call.h"
+#include "mem/paging.h"
+#include "system/kernel_call.h"
 #define assume(b) ((b) ? (void)0 : _die(0xBADA55, __FILE__, __LINE__))
 extern uint32_t k_entry;
 extern volatile uint32_t kticks;
 uint32_t kernel_size;
-task_t owshell;
+//task_t owshell;
 
 void test_disk() {
 	master = newATA(1, 0x1F0);
@@ -67,14 +69,10 @@ void kmain(unsigned long magic, unsigned long addr) {
 	kbd_init();
 	paging_init();
 	printf("Kernel end: 0x%X\n", &end);
-	tasking_init();
-	timer_init(PIT_10MSEC);
+	//tasking_init();
+	//timer_init(PIT_10MSEC);
         cprint("Ready!", VGA_COLOR_MAGENTA);
         test_disk();
-	task_spawn(&owshell, owshell_main, task_current->regs.eflags);
-	while(1) {
-		task_sleep(&task_main, 100);
-		draw_clock();
-		wait_int();
-	}
+	//task_spawn(&owshell, owshell_main, task_current->regs.eflags);
+	owshell_main();
 }
