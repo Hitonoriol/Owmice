@@ -1,6 +1,10 @@
 #ifndef _IO_INITRD_H
 #define _IO_INITRD_H
 
+#define INITRD_BUFFER_SIZE 1024
+
+char *read_buffer;
+
 typedef struct {
    uint32_t nfiles; 
 } initrd_header_t;
@@ -27,6 +31,8 @@ static uint32_t initrd_read(fs_node_t *node, uint32_t offset, uint32_t size, uin
 		return 0;
 	if (offset+size > header.length)
 		size = header.length-offset;
+	if (size > INITRD_BUFFER_SIZE)
+		return 0;
 	memcpy(buffer, (uint8_t*) (header.offset+offset), size);
 	return size;
 }
@@ -106,17 +112,23 @@ fs_node_t *initrd_init(uint32_t location) {
 	printf(" Done!\n");
 	return initrd_root;
 }
-
+#define EXEC_ADDR 0x100060
 void cat_initrd(char* fname) {
 	printf("Contents of %s:\n", fname);
-	char *buf = (char*)malloc(512);
 	fs_node_t *fsnode = finddir_fs(fs_root, fname);
-	uint32_t sz = read_fs(fsnode, 0, 32, (uint8_t*)buf);
+	if (fsnode == NULL) {
+		printf("No such file\n");
+		return;
+	}
+	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)EXEC_ADDR);
+	if (sz == 0)
+		printf("Invalid file entry or the file is too large.\n");
 	uint32_t j;
-	for (j = 0; j < sz; j++)
-		term_putchar(buf[j]);
-	term_writestring("\n");
-	free((uint32_t)buf);
+	for (j = 1; j <= sz; j++) {
+		printf("0x%X ", *((uint8_t*)(EXEC_ADDR + (j-1))) );
+		if (j % 5 == 0)
+			printf("\n");
+	}
 }
 
 void ls_initrd() {
@@ -133,5 +145,22 @@ void ls_initrd() {
   		i++;
 	}
 	term_undo_nl();
+}
+
+typedef int bin_main(void);
+int exec_initrd(char* fname) {
+	//printf("Trying to execute %s\n", fname);
+	fs_node_t *fsnode = finddir_fs(fs_root, fname);
+	if (fsnode == NULL) {
+		printf("Program \"%s\" not found\n", fname);
+		return (int)0xDEADF113;
+	}
+	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)EXEC_ADDR);
+	if (sz == 0)
+		printf("Invalid file entry or the file is too large.\n");
+	//printf("Bin size: %u\n", sz);
+	int ret = ((bin_main*)EXEC_ADDR)();
+	printf("\n* %s returned: 0x%X", fname, ret);
+	return ret;
 }
 #endif

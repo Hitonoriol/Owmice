@@ -69,6 +69,11 @@ syscall:
 	pop ebp
 	ret
 
+global exec_space
+exec_space:
+	;0x100060 - start
+	times 1028 db 0
+
 ;extern pit_handler_main
 ;global pit_handler
 ;pit_handler:

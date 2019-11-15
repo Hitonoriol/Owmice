@@ -5,51 +5,46 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#include "../standard/stdio.h"
 #include "../standard/strings.h"
 #include "../standard/owapi.h"
 
+char* bin_ext_str = ".owb";
 char* tbuf;
-char* cmd[]={", ", "die","cls","help", "lsrd", "catrd <file>", "mem", "now", "title <title string>"};
+char* cmd[]={", ", "help", "catrd <file>", "execrd <file>", "title <title string>"};
 
 void whelp() {
 	int CMDS = (sizeof(cmd) / sizeof(cmd[0])) - 1;
 	int i = 1;
+	owmice_writestring("Built-in commands:\n");
 	while(i <= CMDS) {
 		owmice_writestring(cmd[i]);
 		if (i != CMDS) owmice_writestring(cmd[0]);
 		i++;
 	}
+	owmice_writestring("\nFor more commands type \"lsrd\".");
 }
+
+#define BIN_EXT 4
 
 void execute(char* com) {
 		clearchar(tbuf);
-		if (streq(com, "exit"))
-			return;
-		else if (streq(com, "help"))
+		if (streq(com, "help"))
 			whelp();
-		else if (streq(com, "die"))
-			owmice_die(0xDEAD);
-		else if (streq(com, "cls"))
-			owmice_cls();
-		//else if (streq(com, "ticks"))
-		//	printf("Ticks: %d\nUptime: %d seconds", kticks, kticks/100);
-		else if (streq(com, "lsrd"))
-			owmice_ls_initrd();
-		else if (streq(com, "mem")) {
-			owmice_print_meminfo();
-			return;
-		}
-		else if (streq(com, "now"))
-			owmice_print_date();
-		//else if (streq(com, "lstasks"))
-		//	task_list();
 		else if (strchr(com, (int)' ') && strtok(tbuf, com, " ") != NULL){
 			if (streq(tbuf, "catrd"))
-				owmice_cat_initrd(strtok(tbuf, com, " "));
+				owmice_cat_initrd(com);
 			else if (streq(tbuf, "title"))
 				owmice_set_title(com);
-		} else
-			owmice_writestring("No such command.");
+			else if (streq(tbuf, "execrd"))
+				owmice_exec_initrd(com);
+		} else {
+			uint32_t clen = strlen(com);
+			char *bin_name = (char*)owmice_malloc(clen + BIN_EXT + 1);
+			strcpy(bin_name, com);
+			owmice_exec_initrd(strcat(bin_name, bin_ext_str));
+			owmice_free(bin_name);
+		}
 }
 
 void owshell_main() {

@@ -1,4 +1,4 @@
-#define CALLS 13
+#define CALLS 14
 
 void *syscalls[CALLS] = {
 	&die,
@@ -13,7 +13,8 @@ void *syscalls[CALLS] = {
 	&ls_initrd,
 	&cat_initrd,
 	&prompt,
-	&term_set_title
+	&term_set_title,
+	&exec_initrd
 };
 
 extern volatile registers_t regdump;
@@ -38,4 +39,5 @@ int kcall_handle(uint32_t call, int arg1, int arg2) {
 extern void syscall(void);
 void kernel_calls_init() {
 	printf("Syscall entrypoint: 0x%X\n", (uint32_t)syscall);
+	irq_map_handler(0x99, (uint32_t)syscall);
 }

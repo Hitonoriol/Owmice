@@ -1,9 +1,10 @@
-#include "owshell/owshell.h"
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
+
+#include "owshell/owshell.h"
+
 #define brk() stop(__FILE__, __LINE__);
 #include "io/kbdmap.h"
 #include "standard/bitmap.h"
@@ -26,6 +27,8 @@
 #include "system/kernel_call.h"
 #define assume(b) ((b) ? (void)0 : _die(0xBADA55, __FILE__, __LINE__))
 extern uint32_t k_entry;
+extern uint32_t exec_space;
+
 extern volatile uint32_t kticks;
 uint32_t kernel_size;
 //task_t owshell;
@@ -68,6 +71,8 @@ void kmain(unsigned long magic, unsigned long addr) {
    	kernel_calls_init();
 	kbd_init();
 	paging_init();
+	read_buffer = (char*)malloc(INITRD_BUFFER_SIZE);
+	printf("Exec space: 0x%X\n", (uint32_t)&exec_space);
 	printf("Kernel end: 0x%X\n", &end);
 	//tasking_init();
 	//timer_init(PIT_10MSEC);

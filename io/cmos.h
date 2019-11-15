@@ -1,6 +1,6 @@
 #define from_bcd(val)  ((val / 16) * 10 + (val & 0xf))
 
-int16_t timezone = 3;
+int16_t timezone = 2;
 uint16_t century = 2;
 
 struct timeval {

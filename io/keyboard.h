@@ -45,7 +45,6 @@ void keyboard_handler_main(void) {
 	EOI();
 	unsigned char status;
 	char keycode;
-	if (!request) return;
 	status = read_port(KEYBOARD_STATUS_PORT);
 		if (status & 0x01) {
 			keycode = read_port(KEYBOARD_DATA_PORT);

@@ -1,3 +1,6 @@
+#ifndef PAGING_H
+#define PAGING_H
+
 #define PAGES_PER_TABLE 1024
 #define TABLES_PER_DIR	1024
 #define PAGEDIR_IDX(x) (((x) >> 22) & 0x3ff)
@@ -266,11 +269,12 @@ bool alloc_page (uint32_t* e) {
 	return true;
 }
 
-void free_page (uint32_t* e) {
-	void* p = (void*)page_pfn (*e);
-	if (p)
-		free_block (p);
-	page_del_property (e, PAGE_PRESENT);
+void free_page (uint32_t virt) {
+	pagedir_t* tempdir = get_directory();
+	uint32_t* e = &tempdir->entry [PAGEDIR_IDX ((uint32_t) virt)];
+	pagetable_t* table = (pagetable_t*) PAGE_ADDR(e);
+	uint32_t* page = &table->entry [PAGETABLE_IDX((uint32_t)virt)];
+	page_del_property (page, PAGE_PRESENT);
 }
 
 #define MEM_INIT_SIZE 4
@@ -283,7 +287,7 @@ void paging_init() {
 
 	k_heapLCABInit(&kernel_heap);
 	k_heapLCABAddBlock(&kernel_heap, kernel_mem->start, MEM_INIT_SIZE * 0x100000);
-	malloc(PAGE_SIZE * 4);
+	malloc(PAGE_SIZE * 20);
 	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	printf("Done!\n");
 
@@ -339,3 +343,5 @@ void paging_init() {
 	printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
 	printf("Done!\n");
 }
+
+#endif

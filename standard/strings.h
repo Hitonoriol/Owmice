@@ -1,5 +1,6 @@
 #ifndef _STANDARD_STRINGS_H
 #define _STANDARD_STRINGS_H
+
 char nullterm = '\0';
 char linebreak = '\n';
 
@@ -119,16 +120,33 @@ char *strcpy(char* destination, char* source) {
 	return ptr;
 }
 
+char *substr(char *dest, char *src, int position, int length) {
+	while(length > 0) {
+		*dest = *(src+position);
+		dest++;
+		src++;
+		length--;
+	}
+	*dest = nullterm;
+	return dest;
+} 
+
+extern void owmice_writestring(char*);
 char *strshl (char *str, size_t amt) {
 	size_t i, size = strlen(str);
 	if (amt >= size) {
+		owmice_writestring("bruh\n");
     		memset(str, nullterm, size);
     		return str;
 	}
 	for (i = 0; i < size-amt; i++) {
+		if (i + amt > size)
+			break;
     		str[i] = str[i + amt];
     		str[i + amt] = nullterm;
 	}
+	if (strlen(str) > size - amt)
+		substr(str, str, 0, size - amt);
 	return str;
 }
 
@@ -147,15 +165,4 @@ char *strtok(char *dest, char *src, char *delim) {
 		return NULL;
 	return dest;
 }
-
-char *substr(char *dest, char *src, int position, int length) {
-	while(length > 0) {
-		*dest = *(src+position);
-		dest++;
-		src++;
-		length--;
-	}
-	*dest = nullterm;
-	return dest;
-} 
 #endif
