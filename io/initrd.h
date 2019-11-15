@@ -1,7 +1,7 @@
 #ifndef _IO_INITRD_H
 #define _IO_INITRD_H
 
-#define INITRD_BUFFER_SIZE 1024
+#define INITRD_BUFFER_SIZE 1048576
 
 char *read_buffer;
 
@@ -92,7 +92,8 @@ fs_node_t *initrd_init(uint32_t location) {
 	initrd_mtp->impl = 0;
 	root_nodes = (fs_node_t*)malloc(sizeof(fs_node_t) * initrd_header->nfiles);
 	nroot_nodes = initrd_header->nfiles;
-	printf("%d files found.", initrd_header->nfiles);
+	printf("%d files found on ramdisk\n", initrd_header->nfiles);
+	printf("Max ramdisk read buffer size: %uB\n", INITRD_BUFFER_SIZE);
 	uint32_t i;
 	for (i = 0; i < initrd_header->nfiles; i++) {
 		file_headers[i].offset += location;

@@ -28,23 +28,14 @@
 typedef int sys_call(uint32_t call, int32_t arg1, int32_t arg2, int32_t arg3);
 
 int owmice_call0(uint32_t call) {
-	/*int a;
-	asm volatile("int $0x99" : "=a" (a) : "0" (call));
-	return a;*/
 	return ((sys_call *)CALL_BASE)(call, 0, 0, 0);
 }
 
 int owmice_call1(uint32_t call, int arg1) {
-	/*int a;
-	asm volatile("int $0x99" : "=a" (a) : "0" (call), "b" ((int)arg1));
-	return a;*/
 	return ((sys_call *)CALL_BASE)(call, arg1, 0, 0);
 }
 
 int owmice_call2(uint32_t call, int arg1, int arg2) {
-	/*int a;
-	asm volatile("int $0x99" : "=a" (a) : "0" (num), "b" ((int)p1), "c" ((int)p2));
-	return a;*/
 	return ((sys_call *)CALL_BASE)(call, arg1, arg2, 0);
 }
 

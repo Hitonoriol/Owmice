@@ -159,6 +159,10 @@ typedef struct _multiboot_memory_map {
 volatile _multiboot_memory_map_t *mb_mmap;
 volatile uint32_t mem_avail;
 
+#define MEM_INIT_SIZE 4
+extern uint32_t kernel_size;
+#define KERNEL_PHYS_START 0x100000
+#define PAGE_SIZE 4096
 void pmem_init(multiboot_info_t* mbt_ptr) {
 	mb_mmap_len = mbt_ptr->mmap_length;
         mem_size = mbt_ptr->mem_upper;
@@ -171,13 +175,26 @@ void pmem_init(multiboot_info_t* mbt_ptr) {
         blocks_used = blocks_max;
         term_tempcolor(VGA_COLOR_LIGHT_BLUE);
         kprint("Memory map");
-        while((uint32_t)mb_mmap < mbt_ptr->mmap_addr + mbt_ptr->mmap_length) {
+
+	uint32_t size_pa = ((kernel_size&0xFFFFF000) + 0x1000);
+		
+       while((uint32_t)mb_mmap < mbt_ptr->mmap_addr + mbt_ptr->mmap_length) {
         	printf("Addr: 0x%X%X Len: %uB Type: %s\n",
         		mb_mmap->base_addr_high, mb_mmap->base_addr_low,
         		mb_mmap->length_low,
         		mem_regions[mb_mmap->type]);
-        	if (mb_mmap->type == 1)
+        	if (mb_mmap->type == 1 && mb_mmap->base_addr_low > 0) {
 			mem_init_region(mb_mmap->base_addr_low, mb_mmap->length_low);
+			printf("0x%X %u adding heap block\n", mb_mmap->base_addr_low, mb_mmap->length_low);
+			if (kernel_mem == NULL) {
+				kernel_mem = (mem_t*)malloc(sizeof(mem_t));
+				kernel_mem->start = mb_mmap->base_addr_low + size_pa + PAGE_SIZE * 30;
+				kernel_mem->end = kernel_mem->start + (mb_mmap->length_low - size_pa - PAGE_SIZE * 30);
+				k_heapLCABInit(&kernel_heap);
+				printf("%X %X %u\n", kernel_mem->start, kernel_mem->end, kernel_mem->end-kernel_mem->start);
+			k_heapLCABAddBlock(&kernel_heap, kernel_mem->start, kernel_mem->end - kernel_mem->start);
+			}
+		}
 		else {
 			mem_deinit_region(mb_mmap->base_addr_low, mb_mmap->length_low);
 		}

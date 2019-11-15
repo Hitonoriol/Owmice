@@ -280,6 +280,7 @@ void free_page (uint32_t virt) {
 #define MEM_INIT_SIZE 4
 extern uint32_t kernel_size;
 void paging_init() {
+	return;
 	uint32_t size_pa = ((kernel_size&0xFFFFF000) + 0x1000);
 	kernel_mem = (mem_t*)malloc(sizeof(mem_t));
 	kernel_mem->start = KERNEL_PHYS_START + size_pa;

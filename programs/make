@@ -1,10 +1,22 @@
-nasm -fbin time.asm -o time.owb
-nasm -fbin mem.asm -o mem.owb
-nasm -fbin echo.asm -o echo.owb
-nasm -fbin die.asm -o die.owb
-nasm -fbin lsrd.asm -o lsrd.owb
-nasm -fbin catrd.asm -o catrd.owb
-nasm -fbin cls.asm -o cls.owb
-cp *.owb ../utils/files
+for entry in *.asm
+do
+	s=${entry##*/}
+	s=${s%.asm}
+	nasm -fbin "$entry" -o "$s".owb || exit
+done
+
+for entry in *.c
+do
+	s=${entry##*/}
+	s=${s%.c}
+	i686-elf-gcc -ffreestanding -c "$entry" -o "$s".o || exit
+	ld -Ttext=0x100060 --oformat binary -o "$s".owb "$s".o || exit
+done
+
+for entry in *.owb
+do
+	mv "$entry" ../utils/files || exit
+done
+
 cd ../utils
 ./packinitrd

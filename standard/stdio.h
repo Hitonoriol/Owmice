@@ -59,7 +59,7 @@ int ft_print_c(const char *fmt, va_list ap, int len) {
     return ft_printf_aux(fmt, ap, len + 1);
 }
 
-int ft_putnum(unsigned long long n, unsigned int base, const char *digits) {
+int ft_putnum(unsigned long n, unsigned int base, const char *digits) {
     int res = 1;
     if (n >= base)
         res += ft_putnum(n / base, base, digits);

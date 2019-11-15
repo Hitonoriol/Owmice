@@ -40,7 +40,6 @@ void execute(char* com) {
 		if (streq(com, "help"))
 			whelp();
 		else if (strchr(com, (int)' ') && strtok(tbuf, com, " ") != NULL){
-			printf("%s exec with arg \"%s\"\n", tbuf, com);
 			bin_file_exec(tbuf, (int)com, 0);
 			/*if (streq(tbuf, "catrd"))
 				owmice_cat_initrd(com);
