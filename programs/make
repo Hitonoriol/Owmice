@@ -1,7 +1,9 @@
 nasm -fbin time.asm -o time.owb
 nasm -fbin mem.asm -o mem.owb
+nasm -fbin echo.asm -o echo.owb
 nasm -fbin die.asm -o die.owb
 nasm -fbin lsrd.asm -o lsrd.owb
+nasm -fbin catrd.asm -o catrd.owb
 nasm -fbin cls.asm -o cls.owb
 cp *.owb ../utils/files
 cd ../utils

@@ -11,7 +11,7 @@
 
 char* bin_ext_str = ".owb";
 char* tbuf;
-char* cmd[]={", ", "help", "catrd <file>", "execrd <file>", "title <title string>"};
+char* cmd[]={", ", "help", "title <title string>"};
 
 void whelp() {
 	int CMDS = (sizeof(cmd) / sizeof(cmd[0])) - 1;
@@ -27,23 +27,29 @@ void whelp() {
 
 #define BIN_EXT 4
 
+void bin_file_exec(char* com, int arg1, int arg2) {
+	uint32_t clen = strlen(com);
+	char *bin_name = (char*)owmice_malloc(clen + BIN_EXT + 1);
+	strcpy(bin_name, com);
+	owmice_exec_initrd(strcat(bin_name, bin_ext_str), arg1, arg2);
+	owmice_free(bin_name);
+}
+
 void execute(char* com) {
 		clearchar(tbuf);
 		if (streq(com, "help"))
 			whelp();
 		else if (strchr(com, (int)' ') && strtok(tbuf, com, " ") != NULL){
-			if (streq(tbuf, "catrd"))
+			printf("%s exec with arg \"%s\"\n", tbuf, com);
+			bin_file_exec(tbuf, (int)com, 0);
+			/*if (streq(tbuf, "catrd"))
 				owmice_cat_initrd(com);
 			else if (streq(tbuf, "title"))
 				owmice_set_title(com);
 			else if (streq(tbuf, "execrd"))
-				owmice_exec_initrd(com);
+				owmice_exec_initrd(com);*/
 		} else {
-			uint32_t clen = strlen(com);
-			char *bin_name = (char*)owmice_malloc(clen + BIN_EXT + 1);
-			strcpy(bin_name, com);
-			owmice_exec_initrd(strcat(bin_name, bin_ext_str));
-			owmice_free(bin_name);
+			bin_file_exec(com, 0, 0);
 		}
 }
 

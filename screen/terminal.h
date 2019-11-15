@@ -137,8 +137,7 @@ void term_putchar(char c) {
 	term_putentryat(c, term_color, term_column, term_row);
 	if (++term_column == VGA_WIDTH) {
 		term_column = 0;
-		if (++term_row == VGA_HEIGHT)
-			term_row = SCREEN_START;
+		++term_row;
 	}
 	if (term_row > (VGA_HEIGHT - 1)) {
 		term_row--;

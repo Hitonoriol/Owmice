@@ -25,14 +25,9 @@ int kcall_handle(uint32_t call, int arg1, int arg2) {
 		printf("[Invalid syscall received: %u]\n", call);
 		return -1;
 	}
-	//tasking_pause();
-	//printf("[Syscall received: %u %u %u]\n", call, arg1, arg2);
-	//return 123;
 
 	void *location = syscalls[call];
 	int ret = ((func *)location)(arg1, arg2);
-	//dump_registers();
-	//printf("[Syscall to 0x%X returned: %u]\n", (uint32_t)location, ret);
 	return ret;
 }
 

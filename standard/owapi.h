@@ -25,27 +25,31 @@
 
 #define CALL_EXEC_INITRD 13	//char*
 
-typedef int sys_call(uint32_t call, int32_t arg1, int32_t arg2);
+typedef int sys_call(uint32_t call, int32_t arg1, int32_t arg2, int32_t arg3);
 
 int owmice_call0(uint32_t call) {
 	/*int a;
 	asm volatile("int $0x99" : "=a" (a) : "0" (call));
 	return a;*/
-	return ((sys_call *)CALL_BASE)(call, 0, 0);
+	return ((sys_call *)CALL_BASE)(call, 0, 0, 0);
 }
 
 int owmice_call1(uint32_t call, int arg1) {
 	/*int a;
 	asm volatile("int $0x99" : "=a" (a) : "0" (call), "b" ((int)arg1));
 	return a;*/
-	return ((sys_call *)CALL_BASE)(call, arg1, 0);
+	return ((sys_call *)CALL_BASE)(call, arg1, 0, 0);
 }
 
 int owmice_call2(uint32_t call, int arg1, int arg2) {
 	/*int a;
 	asm volatile("int $0x99" : "=a" (a) : "0" (num), "b" ((int)p1), "c" ((int)p2));
 	return a;*/
-	return ((sys_call *)CALL_BASE)(call, arg1, arg2);
+	return ((sys_call *)CALL_BASE)(call, arg1, arg2, 0);
+}
+
+int owmice_call3(uint32_t call, int arg1, int arg2, int arg3) {
+	return ((sys_call *)CALL_BASE)(call, arg1, arg2, arg3);
 }
 
 /********************************************************/
@@ -102,8 +106,8 @@ void owmice_set_title(char* str) {
 	owmice_call1(CALL_TERM_SET_TITLE, (int)str);
 }
 
-int owmice_exec_initrd(char* fname) {
-	return owmice_call1(CALL_EXEC_INITRD, (int)fname);
+int owmice_exec_initrd(char* fname, int arg1, int arg2) {
+	return owmice_call3(CALL_EXEC_INITRD, (int)fname, arg1, arg2);
 }
 /********************************************************/
 #endif

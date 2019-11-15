@@ -120,15 +120,19 @@ void cat_initrd(char* fname) {
 		printf("No such file\n");
 		return;
 	}
-	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)EXEC_ADDR);
-	if (sz == 0)
+	char* buf = (char*)malloc(INITRD_BUFFER_SIZE);
+	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)buf);
+	if (sz == 0) {
 		printf("Invalid file entry or the file is too large.\n");
+		free((uint32_t)buf);
+	}
 	uint32_t j;
 	for (j = 1; j <= sz; j++) {
-		printf("0x%X ", *((uint8_t*)(EXEC_ADDR + (j-1))) );
+		printf("0x%X ", buf[j-1]);
 		if (j % 5 == 0)
 			printf("\n");
 	}
+	free((uint32_t)buf);
 }
 
 void ls_initrd() {
@@ -147,8 +151,8 @@ void ls_initrd() {
 	term_undo_nl();
 }
 
-typedef int bin_main(void);
-int exec_initrd(char* fname) {
+typedef int bin_main(int, int);
+int exec_initrd(char* fname, int arg1, int arg2) {
 	//printf("Trying to execute %s\n", fname);
 	fs_node_t *fsnode = finddir_fs(fs_root, fname);
 	if (fsnode == NULL) {
@@ -159,7 +163,7 @@ int exec_initrd(char* fname) {
 	if (sz == 0)
 		printf("Invalid file entry or the file is too large.\n");
 	//printf("Bin size: %u\n", sz);
-	int ret = ((bin_main*)EXEC_ADDR)();
+	int ret = ((bin_main*)EXEC_ADDR)(arg1, 0);
 	printf("\n* %s returned: 0x%X", fname, ret);
 	return ret;
 }
