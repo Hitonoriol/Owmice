@@ -113,6 +113,23 @@ fs_node_t *initrd_init(uint32_t location) {
 	printf(" Done!\n");
 	return initrd_root;
 }
+
+char *read_initrd(char* fname) {
+	fs_node_t *fsnode = finddir_fs(fs_root, fname);
+	if (fsnode == NULL)
+		return NULL;
+	char* buf = (char*)malloc(INITRD_BUFFER_SIZE);
+	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)buf);
+	if (sz == 0) {
+		free((uint32_t)buf);
+		return NULL;
+	}
+	char* ret = (char*)malloc(sz);
+	memmove(ret, buf, sz);
+	free((uint32_t)buf);
+	return ret;
+}
+
 #define EXEC_ADDR 0x100060
 void cat_initrd(char* fname) {
 	printf("Contents of %s:\n", fname);
@@ -152,20 +169,31 @@ void ls_initrd() {
 	term_undo_nl();
 }
 
+extern uint32_t shell_buf;
+extern uint32_t shell_size;
+extern char* shell_fname;
 typedef int bin_main(int, int);
 int exec_initrd(char* fname, int arg1, int arg2) {
-	//printf("Trying to execute %s\n", fname);
+	
+	if (!streq(fname, shell_fname))
+		memmove((void*)shell_buf, (void*)EXEC_ADDR, shell_size);
+
 	fs_node_t *fsnode = finddir_fs(fs_root, fname);
 	if (fsnode == NULL) {
-		printf("Program \"%s\" not found\n", fname);
+		printf("Program \"%s\" not found", fname);
 		return (int)0xDEADF113;
 	}
 	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)EXEC_ADDR);
+
 	if (sz == 0)
 		printf("Invalid file entry or the file is too large.\n");
-	//printf("Bin size: %u\n", sz);
+
 	int ret = ((bin_main*)EXEC_ADDR)(arg1, 0);
-	printf("\n* %s returned: 0x%X", fname, ret);
+	//printf("\n* %s returned: 0x%X", fname, ret);
+
+	if (!streq(fname, shell_fname))
+		memmove((void*)EXEC_ADDR, (void*)shell_buf, shell_size);
+
 	return ret;
 }
 #endif

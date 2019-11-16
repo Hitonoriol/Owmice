@@ -4,8 +4,13 @@
 #define PIT_BASE_FQ 1193180
 #define PIT_10MSEC 100
 extern void pit_handler(void);
-volatile uint32_t kticks = 0, sleep_amt = 0;
+unsigned long long kticks = 0;
+volatile uint32_t sleep_amt = 0;
 extern void die(uint32_t stat);
+
+unsigned long long *get_ticks(){
+	return &kticks;
+}
 
 void sleep (uint32_t msec) {	//global sleep(stops scheduler because he can)
 	if (msec % 10 != 0){

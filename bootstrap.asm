@@ -74,14 +74,14 @@ exec_space:
 	;0x100060 - start
 	times 1048592 db 0
 
-;extern pit_handler_main
-;global pit_handler
-;pit_handler:
-;	pushad
-;	cld
-;	call pit_handler_main
-;	popad
-;	iretd
+extern pit_handler_main
+global pit_handler
+pit_handler:
+	pushad
+	cld
+	call pit_handler_main
+	popad
+	iretd
 
 ;extern kcall_handle	
 ;global kcall_entry

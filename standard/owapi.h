@@ -25,6 +25,11 @@
 
 #define CALL_EXEC_INITRD 13	//char*
 
+#define CALL_GET_CHAR 14	//void
+
+#define CALL_GET_TICKS 15	//void | returns unsigned long long*
+#define CALL_READ_INITRD 16	//char*
+
 typedef int sys_call(uint32_t call, int32_t arg1, int32_t arg2, int32_t arg3);
 
 int owmice_call0(uint32_t call) {
@@ -99,6 +104,18 @@ void owmice_set_title(char* str) {
 
 int owmice_exec_initrd(char* fname, int arg1, int arg2) {
 	return owmice_call3(CALL_EXEC_INITRD, (int)fname, arg1, arg2);
+}
+
+char owmice_get_char() {
+	return owmice_call0(CALL_GET_CHAR);
+}
+
+unsigned long long owmice_get_ticks() {
+	return *((unsigned long long*)owmice_call0(CALL_GET_TICKS));
+}
+
+char* owmice_read_initrd(char* fname) {
+	return (char*)owmice_call1(CALL_READ_INITRD, (int)fname);
 }
 /********************************************************/
 #endif

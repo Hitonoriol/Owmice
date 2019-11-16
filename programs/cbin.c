@@ -1,8 +1,14 @@
+/*
+	This is an example of Owmice C program
+	Notice that origin point must be at 0x100060
+	because I'm a lazy fuck and it's just fun and easy, you know
+*/
+
 #include <stddef.h>
 #include <stdint.h>
 
-extern void owmice_writestring(char*);
-extern int printf(char *fmt, ...);
+#include "../standard/owapi.inc"
+#include "../standard/stdio.inc"
 
 int main(char* arg) {
 	owmice_writestring("Hello from test C binary!\n");

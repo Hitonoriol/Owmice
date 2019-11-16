@@ -9,6 +9,7 @@ volatile int bufpos = 0;
 volatile uint8_t request = 0;
 char *charbuffer = "a";
 char keychar;
+char keycode;
 
 void kbd_init(void) {
 	printf("Setting up keyboard driver... ");
@@ -44,7 +45,6 @@ char kbd_get_char() {
 void keyboard_handler_main(void) {
 	EOI();
 	unsigned char status;
-	char keycode;
 	status = read_port(KEYBOARD_STATUS_PORT);
 		if (status & 0x01) {
 			keycode = read_port(KEYBOARD_DATA_PORT);

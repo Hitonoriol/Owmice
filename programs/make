@@ -2,6 +2,7 @@ for entry in *.asm
 do
 	s=${entry##*/}
 	s=${s%.asm}
+	echo Building "$s"...
 	nasm -fbin "$entry" -o "$s".owb || exit
 done
 
@@ -9,6 +10,7 @@ for entry in *.c
 do
 	s=${entry##*/}
 	s=${s%.c}
+	echo Building "$s"...
 	i686-elf-gcc -ffreestanding -c "$entry" -o "$s".o || exit
 	ld -Ttext=0x100060 --oformat binary -o "$s".owb "$s".o || exit
 done
@@ -18,5 +20,10 @@ do
 	mv "$entry" ../utils/files || exit
 done
 
+rm *.o
+
 cd ../utils
+
+echo Packing files to ramdisk...
+
 ./packinitrd

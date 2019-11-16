@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-#include "owshell/owshell.h"
-
 #define brk() stop(__FILE__, __LINE__);
 #include "io/kbdmap.h"
 #include "standard/bitmap.h"
@@ -15,7 +13,7 @@
 #include "io/ATA.h"
 #include "io/idt.h"
 //#include "standard/task.h"
-//#include "io/timer.h"
+#include "io/timer.h"
 #include "io/cmos.h"
 #include "io/keyboard.h"
 #include "misc/multiboot.h"
@@ -29,10 +27,12 @@
 extern uint32_t k_entry;
 extern uint32_t exec_space;
 
-extern volatile uint32_t kticks;
+extern unsigned long long kticks;
+
 uint32_t kernel_size;
 //task_t owshell;
 
+char* shell_fname = "owshell.owb";
 void test_disk() {
 	master = newATA(1, 0x1F0);
 	if(ATA_identify(master) != 0) {
@@ -52,6 +52,8 @@ void test_disk() {
 	printf("First sector: %s\n", firstSector);
 	free((uint32_t)firstSector);
 }
+
+uint32_t shell_buf, shell_size;
 
 void kmain(unsigned long magic, unsigned long addr) {
 	create_gdt();
@@ -75,9 +77,22 @@ void kmain(unsigned long magic, unsigned long addr) {
 	printf("Exec space: 0x%X\n", (uint32_t)&exec_space);
 	printf("Kernel end: 0x%X\n", &end);
 	//tasking_init();
-	//timer_init(PIT_10MSEC);
+	timer_init(PIT_10MSEC);
         cprint("Ready!", VGA_COLOR_MAGENTA);
         test_disk();
 	//task_spawn(&owshell, owshell_main, task_current->regs.eflags);
-	owshell_main();
+	//owshell_main();
+
+	fs_node_t *fsnode = finddir_fs(fs_root, shell_fname);
+	if (fsnode == NULL) {
+		printf("Shell binary not found\n");
+		die(0);
+		return;
+	}
+	char* buf = (char*)malloc(INITRD_BUFFER_SIZE);
+	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)buf);
+	free((uint32_t)buf);
+	shell_size = sz;
+	shell_buf = (uint32_t)malloc(shell_size);
+	exec_initrd(shell_fname, 0, 0);
 }
