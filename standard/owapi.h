@@ -29,6 +29,7 @@
 
 #define CALL_GET_TICKS 15	//void | returns unsigned long long*
 #define CALL_READ_INITRD 16	//char*
+#define CALL_DRAW 17		//u32 u32 u8
 
 typedef int sys_call(uint32_t call, int32_t arg1, int32_t arg2, int32_t arg3);
 
@@ -116,6 +117,10 @@ unsigned long long owmice_get_ticks() {
 
 char* owmice_read_initrd(char* fname) {
 	return (char*)owmice_call1(CALL_READ_INITRD, (int)fname);
+}
+
+void owmice_draw(uint32_t x, uint32_t y, uint8_t color) {
+	owmice_call3(CALL_DRAW, (int)x, (int)y, (int)color);
 }
 /********************************************************/
 #endif

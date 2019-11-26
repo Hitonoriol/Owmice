@@ -15,3 +15,4 @@ extern int owmice_exec_initrd(char*, int, int);
 extern char owmice_get_char(void);
 extern unsigned long long owmice_get_ticks(void);
 extern char* owmice_read_initrd(char* fname);
+extern void owmice_draw(uint32_t, uint32_t, uint8_t);

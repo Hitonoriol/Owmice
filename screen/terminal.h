@@ -153,6 +153,21 @@ void term_writestring(char* data) {
 }
 
 uint32_t lastcol, lastrow;
+
+void draw(uint32_t x, uint32_t y, int color) {
+	lastcol = term_column;
+	lastrow = term_row;
+	term_row = y;
+	term_column = x;
+	uint8_t tcolor = term_color;
+	uint8_t dcol = vga_entry_color((uint8_t)color, (uint8_t)color);
+	term_color = dcol;
+	term_putchar(' ');
+	term_color = tcolor;
+	term_column = lastcol;
+	term_row = lastrow;
+}
+
 void write_statusbar(uint32_t x) {
 	lastcol = term_column;
 	lastrow = term_row;
