@@ -58,13 +58,14 @@ syscall:
 	push ebp
 	mov ebp, esp
 
+	push dword [ebp + 20]
 	push dword [ebp + 16]
 	push dword [ebp + 12]
 	push dword [ebp + 8]	
 
 	call kcall_handle
 
-	add esp, 12
+	add esp, 16
 
 	pop ebp
 	ret

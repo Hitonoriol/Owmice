@@ -1,4 +1,4 @@
-#define CALLS 18
+#define CALLS 20
 
 void *syscalls[CALLS] = {
 	&die,
@@ -18,20 +18,22 @@ void *syscalls[CALLS] = {
 	&kbd_get_char,
 	&get_ticks,
 	&read_initrd,
-	&draw
+	&draw,
+	&term_disable_scroll,
+	&term_enable_scroll
 };
 
 extern volatile registers_t regdump;
-typedef int func(int arg1, int arg2);
+typedef int func(int arg1, int arg2, int arg3);
 
-int kcall_handle(uint32_t call, int arg1, int arg2) {
+int kcall_handle(uint32_t call, int arg1, int arg2, int arg3) {
 	if (call >= CALLS) {
 		printf("[Invalid syscall received: %u]\n", call);
 		return -1;
 	}
 
 	void *location = syscalls[call];
-	int ret = ((func *)location)(arg1, arg2);
+	int ret = ((func *)location)(arg1, arg2, arg3);
 	return ret;
 }
 

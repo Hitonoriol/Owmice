@@ -11,6 +11,7 @@ size_t term_row;
 size_t term_column;
 uint8_t term_color, term_lastcolor;
 volatile uint16_t* term_buffer = (uint16_t*) 0xB8000;
+bool scroll_term = true;
 size_t pmtlen = 1;
 char* pmt = ">\0";
 
@@ -97,11 +98,21 @@ void term_cls() {
 }
 
 void term_scroll() {
-    for(size_t ii = SCREEN_START; ii < VGA_HEIGHT; ii++){
-        for (size_t i = 0; i < VGA_WIDTH; i++){
-            term_buffer[ii * VGA_WIDTH + i] = term_buffer[(ii + 1) * VGA_WIDTH + i];
-        }
-    }
+	if (!scroll_term)
+		return;
+	for(size_t ii = SCREEN_START; ii < VGA_HEIGHT; ii++){
+		for (size_t i = 0; i < VGA_WIDTH; i++){
+			term_buffer[ii * VGA_WIDTH + i] = term_buffer[(ii + 1) * VGA_WIDTH + i];
+        	}
+	}
+}
+
+void term_disable_scroll() {
+	scroll_term = false;
+}
+
+void term_enable_scroll() {
+	scroll_term = true;
 }
 
 void term_initialize(void) {
@@ -154,6 +165,7 @@ void term_writestring(char* data) {
 
 uint32_t lastcol, lastrow;
 
+#include "../standard/stdio.h"
 void draw(uint32_t x, uint32_t y, int color) {
 	lastcol = term_column;
 	lastrow = term_row;

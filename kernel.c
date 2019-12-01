@@ -89,10 +89,12 @@ void kmain(unsigned long magic, unsigned long addr) {
 		die(0);
 		return;
 	}
+	srand(now());
 	char* buf = (char*)malloc(INITRD_BUFFER_SIZE);
 	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)buf);
 	free((uint32_t)buf);
 	shell_size = sz;
 	shell_buf = (uint32_t)malloc(shell_size);
+	draw(10,10, VGA_COLOR_RED);
 	exec_initrd(shell_fname, 0, 0);
 }

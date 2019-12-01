@@ -7,3 +7,4 @@ extern int printf(char *fmt, ...);
 
 extern int rand();
 extern void srand(unsigned int seed);
+extern int rand_range(int min, int max);
