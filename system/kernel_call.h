@@ -1,4 +1,4 @@
-#define CALLS 20
+#define CALLS 24
 
 void *syscalls[CALLS] = {
 	&die,
@@ -20,7 +20,11 @@ void *syscalls[CALLS] = {
 	&read_initrd,
 	&draw,
 	&term_disable_scroll,
-	&term_enable_scroll
+	&term_enable_scroll,
+	&now,
+	&status_cls,
+	&sleep,
+	&kbd_current_char
 };
 
 extern volatile registers_t regdump;

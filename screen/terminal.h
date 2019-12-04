@@ -43,7 +43,7 @@ void term_revertcolor() {
 void setprompt(char* p){
 	justincase(p);
 	pmtlen = strlen(p);
-	strcpy(pmt, p);
+	strcpy(pmt, p);//pmt must be reserved
 }
 
 void showcur(uint8_t cursor_start, uint8_t cursor_end) {
@@ -78,23 +78,25 @@ void term_undo_nl() {
 }
 
 uint16_t getcurpos(void) {
-    uint16_t pos = 0;
-    write_port(0x3D4, 0x0F);
-    pos |= read_port(0x3D5);
-    write_port(0x3D4, 0x0E);
-    pos |= ((uint16_t)read_port(0x3D5)) << 8;
-    return pos;
+	uint16_t pos = 0;
+	write_port(0x3D4, 0x0F);
+	pos |= read_port(0x3D5);
+	write_port(0x3D4, 0x0E);
+	pos |= ((uint16_t)read_port(0x3D5)) << 8;
+	return pos;
 }
 
 void term_cls() {
 	term_row = SCREEN_START;
 	term_column = 0;
-	for (size_t y = SCREEN_START; y < VGA_HEIGHT; y++) {
+	for (size_t y = SCREEN_START; y <= VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
 			term_buffer[index] = vga_entry(' ', term_color);
 		}
 	}
+	//status_cls();
+	//term_row = SCREEN_START;
 }
 
 void term_scroll() {
@@ -166,7 +168,7 @@ void term_writestring(char* data) {
 uint32_t lastcol, lastrow;
 
 #include "../standard/stdio.h"
-void draw(uint32_t x, uint32_t y, int color) {
+void draw(uint32_t x, uint32_t y, int color) {	//draw a colored entry at coordinates x, y
 	lastcol = term_column;
 	lastrow = term_row;
 	term_row = y;
@@ -180,14 +182,14 @@ void draw(uint32_t x, uint32_t y, int color) {
 	term_row = lastrow;
 }
 
-void write_statusbar(uint32_t x) {
+void write_statusbar(uint32_t x) {//Write to statusbar with right-side offset x 
 	lastcol = term_column;
 	lastrow = term_row;
 	term_row = 0;
 	term_column = x;
 }
 
-void statusbar_rev() {
+void statusbar_rev() {//Stop writing to statusbar
 	term_row = lastrow;
 	term_column = lastcol;
 }
@@ -212,18 +214,6 @@ void console_init() {
 	statusbar_rev();
 }
 
-#define CLOCK_OFFSET 67
-extern int today();
-void draw_clock() {
-	write_statusbar(CLOCK_OFFSET);
-	uint8_t color = vga_entry_color(VGA_COLOR_BLACK, STATUSBAR_BG);
-	uint8_t tmp = term_color;
-	term_color = color;
-	today();
-	term_color = tmp;
-	statusbar_rev();
-}
-
 void term_set_title(char* str) {
 	write_statusbar(VGA_WIDTH - strlen(str));
 	uint8_t color = vga_entry_color(VGA_COLOR_BLACK, STATUSBAR_BG);
@@ -235,7 +225,8 @@ void term_set_title(char* str) {
 }
 
 void prompt() {
-	term_writestring("\n");
+	if (term_row != SCREEN_START)
+		term_writestring("\n");
 	term_writestring(pmt);
 }
 #endif

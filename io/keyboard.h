@@ -11,6 +11,8 @@ char *charbuffer = "a";
 char keychar;
 char keycode;
 
+volatile bool shift_down = false;
+
 void kbd_init(void) {
 	printf("Setting up keyboard driver... ");
 	irq_map_handler(IRQ_KEYBOARD, (unsigned long)keyboard_handler);
@@ -42,6 +44,10 @@ char kbd_get_char() {
 	return keychar;
 }
 
+char kbd_current_char() {
+	return keychar;
+}
+
 void keyboard_handler_main(void) {
 	EOI();
 	unsigned char status;
@@ -49,35 +55,51 @@ void keyboard_handler_main(void) {
 		if (status & 0x01) {
 			keycode = read_port(KEYBOARD_DATA_PORT);
 			keychar = keyboard_map[(unsigned char) keycode];
-			if ((status & 0x20)) return;
-			if (keycode < 0) return;
-			else if(keycode == ENTER_KEY_CODE) {
-				term_putchar('\n');
-				request = 0;
-				bufpos = 0;
+			if (keychar == '\b'){
+					size_t comlen = strlen(con_input);
+					if (comlen > 0){
+						con_input[comlen - 1] = '\0';
+						bufpos++;
+						term_putchar(keychar);
+					}
+					return;
+			}
+			if ((keycode & 0x80)) {	//key up
+				if (keychar == KEY_SHIFT)
+					shift_down = false;
+				keychar = 0;
 				return;
-			} else if (keychar == '\b'){
-				size_t comlen = strlen(con_input);
-				if (comlen > 0){
-					con_input[comlen - 1] = '\0';
-					bufpos++;
-					term_putchar(keychar);
-				} else return;
-			} else {
-				keychar = keyboard_map[(unsigned char)keycode];
-				if (keychar == '\0')
+			} else {	//key down
+				if (keychar == KEY_SHIFT) {
+					shift_down = true;
 					return;
-				if (bufpos >= INPUT_MAXLEN)
+				}
+				else if (keychar == KEY_UP ||
+					keychar == KEY_DOWN ||
+					keychar == KEY_LEFT ||
+					keychar == KEY_RIGHT)
 					return;
-				bufpos++;
-				if (request == KBD_CHAR) {
+				else if(keycode == ENTER_KEY_CODE) {
+					term_putchar('\n');
 					request = 0;
 					bufpos = 0;
 					return;
+				} else {
+					keychar = keyboard_map[(unsigned char)keycode];
+					if (keychar == '\0')
+						return;
+					if (bufpos >= INPUT_MAXLEN)
+						return;
+					bufpos++;
+					if (request == KBD_CHAR) {
+						request = 0;
+						bufpos = 0;
+						return;
+					}
+					memcpy(charbuffer, &keychar, 1);
+					con_input = strcat(con_input, charbuffer);
+					term_putchar(keychar);
 				}
-				memcpy(charbuffer, &keychar, 1);
-				con_input = strcat(con_input, charbuffer);
-				term_putchar(keychar);
 			}
 		}
 		return;

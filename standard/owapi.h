@@ -32,6 +32,10 @@
 #define CALL_DRAW 17		//u32 u32 u8
 #define CALL_DISABLE_SCROLL 18
 #define CALL_ENABLE_SCROLL 19
+#define CALL_NOW 20		//void / ret=uint32
+#define CALL_STATUS_CLS 21
+#define CALL_SLEEP 22		//uint32
+#define CALL_KBD_CURRENT_CHAR 23
 
 typedef int sys_call(uint32_t call, int32_t arg1, int32_t arg2, int32_t arg3);
 
@@ -131,6 +135,22 @@ void owmice_disable_scroll() {
 
 void owmice_enable_scroll() {
 	owmice_call0(CALL_ENABLE_SCROLL);
+}
+
+uint32_t owmice_now() {
+	return (uint32_t)owmice_call0(CALL_NOW);
+}
+
+void owmice_status_cls() {
+	owmice_call0(CALL_STATUS_CLS);
+}
+
+void owmice_sleep(uint32_t msec) {
+	owmice_call1(CALL_SLEEP, msec);
+}
+
+char owmice_kbd_current_char() {
+	return (char)owmice_call0(CALL_KBD_CURRENT_CHAR);
 }
 /********************************************************/
 #endif

@@ -179,14 +179,14 @@ int exec_initrd(char* fname, int arg1, int arg2) {
 		memmove((void*)shell_buf, (void*)EXEC_ADDR, shell_size);
 
 	fs_node_t *fsnode = finddir_fs(fs_root, fname);
-	if (fsnode == NULL) {
-		printf("Program \"%s\" not found", fname);
+	if (fsnode == NULL)
 		return (int)0xDEADF113;
-	}
 	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)EXEC_ADDR);
 
-	if (sz == 0)
+	if (sz == 0) {
 		printf("Invalid file entry or the file is too large.\n");
+		return (int)0xDEADF113;
+	}
 
 	int ret = ((bin_main*)EXEC_ADDR)(arg1, 0);
 	//printf("\n* %s returned: 0x%X", fname, ret);

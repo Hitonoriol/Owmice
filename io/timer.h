@@ -5,7 +5,7 @@
 #define PIT_10MSEC 100
 extern void pit_handler(void);
 unsigned long long kticks = 0;
-volatile uint32_t sleep_amt = 0;
+volatile int32_t sleep_amt = 0;
 extern void die(uint32_t stat);
 
 unsigned long long *get_ticks(){
@@ -13,11 +13,7 @@ unsigned long long *get_ticks(){
 }
 
 void sleep (uint32_t msec) {	//global sleep(stops scheduler because he can)
-	if (msec % 10 != 0){
-		die(0x00BADBED);
-	} else {
-		sleep_amt = msec;
-	}
+	sleep_amt = msec;
 	while (sleep_amt > 0) {
 		wait_int();
 	}

@@ -1,3 +1,9 @@
+#define KEY_SHIFT 15
+#define KEY_UP 11
+#define KEY_LEFT 12
+#define KEY_RIGHT 13
+#define KEY_DOWN 14
+
 char keyboard_map[128] =
 {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',
@@ -7,9 +13,9 @@ char keyboard_map[128] =
   't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
     0,			/* 29   - Control */
   'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
- '\'', '`',   0,		/* Left shift */
+ '\'', '`',   KEY_SHIFT,		/* Left shift */
  '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', ',', '.', '/',   0,				/* Right shift */
+  'm', ',', '.', '/',   KEY_SHIFT,				/* Right shift */
   '*',
     0,	/* Alt */
   ' ',	/* Space bar */
@@ -20,15 +26,15 @@ char keyboard_map[128] =
     0,	/* 69 - Num lock*/
     0,	/* Scroll Lock */
     0,	/* Home key */
-    0,	/* Up Arrow */
+    KEY_UP,	/* Up Arrow */
     0,	/* Page Up */
   '-',
-    0,	/* Left Arrow */
+    KEY_LEFT,	/* Left Arrow */
     0,
-    0,	/* Right Arrow */
+    KEY_RIGHT,	/* Right Arrow */
   '+',
     0,	/* 79 - End key*/
-    0,	/* Down Arrow */
+    KEY_DOWN,	/* Down Arrow */
     0,	/* Page Down */
     0,	/* Insert Key */
     0,	/* Delete Key */

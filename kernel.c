@@ -95,6 +95,5 @@ void kmain(unsigned long magic, unsigned long addr) {
 	free((uint32_t)buf);
 	shell_size = sz;
 	shell_buf = (uint32_t)malloc(shell_size);
-	draw(10,10, VGA_COLOR_RED);
 	exec_initrd(shell_fname, 0, 0);
 }
