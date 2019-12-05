@@ -4,6 +4,16 @@
 #define KEY_RIGHT 13
 #define KEY_DOWN 14
 
+#define _KEY_ONE 2
+#define _KEY_EQ 13
+
+#define SCANCODE_LSHIFT 170
+
+char keyboard_specialchars[14] = 
+{
+0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+'
+};
+
 char keyboard_map[128] =
 {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',

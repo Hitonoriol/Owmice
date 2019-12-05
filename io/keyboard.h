@@ -49,12 +49,13 @@ char kbd_current_char() {
 }
 
 void keyboard_handler_main(void) {
-	EOI();
 	unsigned char status;
 	status = read_port(KEYBOARD_STATUS_PORT);
+	EOI();
 		if (status & 0x01) {
 			keycode = read_port(KEYBOARD_DATA_PORT);
 			keychar = keyboard_map[(unsigned char) keycode];
+
 			if (keychar == '\b'){
 					size_t comlen = strlen(con_input);
 					if (comlen > 0){
@@ -65,8 +66,9 @@ void keyboard_handler_main(void) {
 					return;
 			}
 			if ((keycode & 0x80)) {	//key up
-				if (keychar == KEY_SHIFT)
+				if ((unsigned char)keycode == SCANCODE_LSHIFT)
 					shift_down = false;
+				
 				keychar = 0;
 				return;
 			} else {	//key down
@@ -74,7 +76,9 @@ void keyboard_handler_main(void) {
 					shift_down = true;
 					return;
 				}
-				else if (keychar == KEY_UP ||
+				if (shift_down && (unsigned char)keycode >= _KEY_ONE && (unsigned char)keycode <= _KEY_EQ)
+				keychar = keyboard_specialchars[(unsigned char) keycode];
+				if (keychar == KEY_UP ||
 					keychar == KEY_DOWN ||
 					keychar == KEY_LEFT ||
 					keychar == KEY_RIGHT)
@@ -85,7 +89,6 @@ void keyboard_handler_main(void) {
 					bufpos = 0;
 					return;
 				} else {
-					keychar = keyboard_map[(unsigned char)keycode];
 					if (keychar == '\0')
 						return;
 					if (bufpos >= INPUT_MAXLEN)

@@ -14,3 +14,6 @@ extern char *strcpy(char* destination, char* source);
 extern char *substr(char *dest, char *src, int position, int length);
 extern char *strshl (char *str, size_t amt);
 extern char *strtok(char *dest, char *src, char *delim);
+extern char *ltrim(char *s);
+extern char *rtrim(char *s);
+extern char *trim(char *s);

@@ -32,7 +32,9 @@ extern unsigned long long kticks;
 uint32_t kernel_size;
 //task_t owshell;
 
-char* shell_fname = "owshell.owb";
+char* autostart_fname = "autostart.dat";
+char* shell_fname;
+
 void test_disk() {
 	master = newATA(1, 0x1F0);
 	if(ATA_identify(master) != 0) {
@@ -81,19 +83,31 @@ void kmain(unsigned long magic, unsigned long addr) {
         cprint("Ready!", VGA_COLOR_MAGENTA);
         test_disk();
 	//task_spawn(&owshell, owshell_main, task_current->regs.eflags);
-	//owshell_main();
 
+	//Reading autostart file for the autostart binary
+	fs_node_t *start_node = finddir_fs(fs_root, autostart_fname);
+	if (start_node == NULL) {
+		printf("%s must contain a valid name of the binary existing on the ramdisk\n", autostart_fname);
+		die(0);
+	}
+	printf("Reading %s...\n", autostart_fname);
+	shell_fname = (char*)malloc(128);	
+	clearchar(shell_fname);
+	read_fs(start_node, 0, 128, (uint8_t*)shell_fname);
+	shell_fname = trim(shell_fname);
+
+	printf("Loading %s...\n", shell_fname);
 	fs_node_t *fsnode = finddir_fs(fs_root, shell_fname);
 	if (fsnode == NULL) {
-		printf("Shell binary not found\n");
+		printf("%s doesn't exist.\n", shell_fname);
 		die(0);
-		return;
 	}
-	srand(now());
 	char* buf = (char*)malloc(INITRD_BUFFER_SIZE);
 	uint32_t sz = read_fs(fsnode, 0, INITRD_BUFFER_SIZE, (uint8_t*)buf);
 	free((uint32_t)buf);
 	shell_size = sz;
 	shell_buf = (uint32_t)malloc(shell_size);
 	exec_initrd(shell_fname, 0, 0);
+	
+	die(0);
 }

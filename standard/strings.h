@@ -1,6 +1,5 @@
 #ifndef _STANDARD_STRINGS_H
 #define _STANDARD_STRINGS_H
-
 char nullterm = '\0';
 char linebreak = '\n';
 
@@ -163,5 +162,30 @@ char *strtok(char *dest, char *src, char *delim) {
 	if (dest[0] == nullterm)
 		return NULL;
 	return dest;
+}
+
+bool isspace(char c) {
+	if (	c == ' ' || c == '\n' ||
+		c == '\t' || c == '\v' ||
+		c == '\f' || c == '\r')
+		return true;
+	else
+		return false;
+}
+
+char *ltrim(char *s) {
+    while(isspace(*s)) s++;
+    return s;
+}
+
+char *rtrim(char *s) {
+    char* back = s + strlen(s);
+    while(isspace(*--back));
+    *(back+1) = '\0';
+    return s;
+}
+
+char *trim(char *s) {
+    return rtrim(ltrim(s)); 
 }
 #endif

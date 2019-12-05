@@ -146,8 +146,8 @@ void cat_initrd(char* fname) {
 	}
 	uint32_t j;
 	for (j = 1; j <= sz; j++) {
-		printf("0x%X ", buf[j-1]);
-		if (j % 5 == 0)
+		printf("%c", buf[j-1]);
+		if (j % 50 == 0)
 			printf("\n");
 	}
 	free((uint32_t)buf);
